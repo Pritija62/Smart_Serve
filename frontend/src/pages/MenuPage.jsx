@@ -1,68 +1,156 @@
-import React, { useState } from 'react'
-import { useContext } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import { OrderContext } from '../context/orderContext'
+import LoadingSpinner from '../components/LoadingSpinner'
+import { ShoppingCart, Plus, Minus } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { getMenu } from '../services/api'
 
-export default function MenuPage() {
-  const { cartItems, addToCart, removeFromCart, updateQuantity, totalPrice, totalQuantity } = useContext(OrderContext)
-  const [tableNumber, setTableNumber] = useState('')
+function MenuPage() {
+  const { addToCart } = useContext(OrderContext)
+  const [menuItems, setMenuItems] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [quantities, setQuantities] = useState({})
 
-  // Sample menu items
-  const menuItems = [
-    { id: 1, name: 'Burger', price: 150 },
-    { id: 2, name: 'Fries', price: 50 },
-    { id: 3, name: 'Pizza', price: 200 },
-    { id: 4, name: 'Coke', price: 30 }
-  ]
+  // Fetch menu items from backend
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        setIsLoading(true)
+        const response = await getMenu()
+        setMenuItems(response.data)
+        console.log('📋 Menu loaded:', response.data)
+      } catch (err) {
+        console.error('❌ Error loading menu:', err)
+        setError('Failed to load menu. Please try again.')
+        // Fallback menu for testing
+        setMenuItems([
+          { id: 1, name: 'Burger', price: 150, description: 'Juicy beef burger with cheese' },
+          { id: 2, name: 'Fries', price: 50, description: 'Crispy golden fries' },
+          { id: 3, name: 'Pizza', price: 200, description: 'Delicious cheese pizza' },
+          { id: 4, name: 'Coke', price: 30, description: 'Cold refreshing drink' },
+        ])
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
+    fetchMenu()
+  }, [])
+
+  // Handle quantity changes
+  const handleQuantityChange = (itemId, change) => {
+    setQuantities((prev) => ({
+      ...prev,
+      [itemId]: Math.max(1, (prev[itemId] || 1) + change),
+    }))
+  }
+
+  // Add to cart
   const handleAddToCart = (item) => {
-    console.log('Adding item:', item)
-    addToCart(item)
+    const quantity = quantities[item.id] || 1
+    console.log('🛒 Adding to cart:', { ...item, quantity })
+    
+    addToCart({
+      ...item,
+      quantity,
+    })
+
+    // Reset quantity after adding
+    setQuantities((prev) => ({
+      ...prev,
+      [item.id]: 1,
+    }))
+
+    alert(`${item.name} added to cart!`)
+  }
+
+  if (isLoading) {
+    return <LoadingSpinner />
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 text-lg mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-[#FF8C00] text-white px-6 py-2 rounded-lg hover:bg-orange-600"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div>
-      <h1>Test Menu Page</h1>
-
-      <div>
-        <h2>Menu Items</h2>
-        {menuItems.map(item => (
-          <div key={item.id} style={{ border: '1px solid black', padding: '10px', margin: '5px' }}>
-            <p>{item.name} - Rs {item.price}</p>
-            <button onClick={() => handleAddToCart(item)}>Add to Cart</button>
-          </div>
-        ))}
+    <div className="min-h-screen bg-[#F5F5F5]">
+      {/* Page Title */}
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-[#FF8C00] mb-2">🍽️ Our Menu</h1>
+        <p className="text-gray-600">Choose your favorite dishes</p>
       </div>
 
-      <hr />
+      {/* Menu Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {menuItems.map((item) => (
+          <motion.div
+            key={item.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.05 }}
+            className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition"
+          >
+            {/* Item Image Placeholder */}
+            <div className="bg-gradient-to-r from-[#FF8C00] to-[#008080] h-40 flex items-center justify-center">
+              <span className="text-5xl">🍔</span>
+            </div>
 
-      <div>
-        <h2>Cart Items ({totalQuantity})</h2>
-        {cartItems.length === 0 ? (
-          <p>Cart is empty</p>
-        ) : (
-          cartItems.map(item => (
-            <div key={item.id} style={{ border: '1px solid blue', padding: '10px', margin: '5px' }}>
-              <p>{item.name} × {item.quantity} = Rs {item.price * item.quantity}</p>
-              <button onClick={() => updateQuantity(item.id, item.quantity + 1)}>
-                Increase
-              </button>
-              <button onClick={() => removeFromCart(item.id)}>
-                Remove
+            {/* Item Details */}
+            <div className="p-4">
+              <h3 className="text-lg font-bold text-gray-800 mb-2">{item.name}</h3>
+              <p className="text-sm text-gray-600 mb-3">{item.description}</p>
+
+              {/* Price */}
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-2xl font-bold text-[#FF8C00]">Rs {item.price}</span>
+              </div>
+
+              {/* Quantity Selector */}
+              <div className="flex items-center gap-2 mb-4 bg-gray-100 rounded-lg p-2">
+                <button
+                  onClick={() => handleQuantityChange(item.id, -1)}
+                  className="text-[#008080] hover:text-teal-700 p-1"
+                >
+                  <Minus size={18} />
+                </button>
+                <span className="flex-1 text-center font-semibold">
+                  {quantities[item.id] || 1}
+                </span>
+                <button
+                  onClick={() => handleQuantityChange(item.id, 1)}
+                  className="text-[#008080] hover:text-teal-700 p-1"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+
+              {/* Add to Cart Button */}
+              <button
+                onClick={() => handleAddToCart(item)}
+                className="w-full bg-[#008080] hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+              >
+                <ShoppingCart size={18} />
+                Add to Cart
               </button>
             </div>
-          ))
-        )}
+          </motion.div>
+        ))}
       </div>
-
-      <div>
-        <h2>Cart Summary</h2>
-        <p>Total Items: {totalQuantity}</p>
-        <p>Total Price: Rs {totalPrice}</p>
-      </div>
-
-      <hr />
-      <p><a href="/login">Go to Test Login</a></p>
-      <p><a href="/">Back to Home</a></p>
     </div>
   )
 }
+
+export default MenuPage
