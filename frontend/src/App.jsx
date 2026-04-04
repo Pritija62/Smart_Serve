@@ -4,12 +4,14 @@ import { AuthProvider } from './context/AuthContext'
 import { OrderProvider } from './context/orderContext'
 import LoginPage from './pages/LoginPage'
 import MenuPage from './pages/MenuPage'
+import Header from './components/Header'
 
 function App() {
   return (
     <Router>
       <AuthProvider>
         <OrderProvider>
+          <Header />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/menu" element={<MenuPage />} />
