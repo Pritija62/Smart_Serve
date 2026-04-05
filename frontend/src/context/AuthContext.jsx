@@ -48,8 +48,8 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   // Login function
-  const login = async (username, password, role) => {
-    console.log("login attempt:",{username,role})
+  const login = async (email, password, role) => {
+    console.log("login attempt:",{ email, role })
     try {
       setIsLoading(true)
       setError(null)
@@ -58,9 +58,9 @@ export const AuthProvider = ({ children }) => {
 
       // Choose login endpoint based on role
       if (role === 'kitchen') {
-        response = await loginKitchen(username, password)
+        response = await loginKitchen(email, password)
       } else if (role === 'admin') {
-        response = await loginAdmin(username, password)
+        response = await loginAdmin(email, password)
       } else {
         throw new Error('Invalid role')
       }
@@ -79,7 +79,7 @@ export const AuthProvider = ({ children }) => {
 
       return response.data
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Login failed'
+      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Login failed'
       setError(errorMessage)
       setIsLoggedIn(false)
       throw err
