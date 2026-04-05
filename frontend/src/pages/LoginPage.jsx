@@ -9,7 +9,7 @@ function LoginPage() {
   const navigate = useNavigate()
 
   const [role, setRole] = useState('kitchen')
-  const [username, setUsername] = useState('chef1')
+  const [email, setEmail] = useState('john@restaurant.com')
   const [password, setPassword] = useState('password123')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -18,17 +18,17 @@ function LoginPage() {
     e.preventDefault()
     setError(null)
 
-    if (!username || !password) {
+    if (!email || !password) {
       setError('Please fill in all fields')
       return
     }
 
     try {
       setIsLoading(true)
-      console.log('📝 Login attempt:', { username, role })
+      console.log('📝 Login attempt:', { email, role })
 
       // Call login from AuthContext
-      await login(username, password, role)
+      await login(email, password, role)
 
       console.log('✅ Login successful!')
 
@@ -42,9 +42,22 @@ function LoginPage() {
       }
     } catch (err) {
       console.error('❌ Login error:', err)
-      setError(err.response?.data?.message || 'Login failed. Please try again.')
+      setError(err.response?.data?.error || err.response?.data?.message || 'Login failed. Please try again.')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleRoleChange = (e) => {
+    const nextRole = e.target.value
+    setRole(nextRole)
+
+    if (nextRole === 'kitchen') {
+      setEmail('john@restaurant.com')
+      setPassword('password123')
+    } else if (nextRole === 'admin') {
+      setEmail('admin@restaurant.com')
+      setPassword('admin123')
     }
   }
 
@@ -83,7 +96,7 @@ function LoginPage() {
             </label>
             <select
               value={role}
-              onChange={(e) => setRole(e.target.value)}
+              onChange={handleRoleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF8C00] bg-white"
             >
               <option value="kitchen">👨‍🍳 Kitchen Staff</option>
@@ -92,20 +105,20 @@ function LoginPage() {
             </select>
           </div>
 
-          {/* Username */}
+          {/* Email */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Username
+              Email
             </label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter email"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF8C00]"
               disabled={isLoading}
             />
-            <p className="text-xs text-gray-500 mt-1">Demo: chef1, admin1, user123</p>
+            <p className="text-xs text-gray-500 mt-1">Demo: john@restaurant.com, admin@restaurant.com</p>
           </div>
 
           {/* Password */}

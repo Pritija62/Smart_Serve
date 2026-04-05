@@ -32,16 +32,16 @@ api.interceptors.response.use(
 
 // auth endpoints
 
-export const loginUser = (username, password) => {
-  return api.post('/auth/login', { username, password })
+export const loginUser = (email, password) => {
+  return api.post('/auth/login', { email, password })
 }
 
-export const loginKitchen = (username, password) => {
-  return api.post('/auth/kitchen-login', { username, password })
+export const loginKitchen = (email, password) => {
+  return api.post('/auth/kitchen-login', { email, password })
 }
 
-export const loginAdmin = (username, password) => {
-  return api.post('/auth/admin-login', { username, password })
+export const loginAdmin = (email, password) => {
+  return api.post('/auth/admin-login', { email, password })
 }
 
 export const getCurrentUser = () => {
