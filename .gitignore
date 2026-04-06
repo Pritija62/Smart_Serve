@@ -1,6 +1,8 @@
 # Python
 venv/
 .env
+backend/.env
+frontend/.env
 *.pyc
 __pycache__/
 *.db
