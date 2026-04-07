@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { AuthContext } from '../context/AuthContext'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { CheckCircle, Clock, Trash2, RefreshCw } from 'lucide-react'
+import { CheckCircle, Clock, Trash2, RefreshCw, ChefHat, PartyPopper } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '../services/api'
 
@@ -144,7 +144,10 @@ function KitchenDashboard() {
     <div className="min-h-screen bg-[#F5F5F5]">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-[#FF8C00] mb-2">👨‍🍳 Kitchen Dashboard</h1>
+        <h1 className="mb-2 flex items-center gap-2 text-4xl font-bold text-[#FF8C00]">
+          <ChefHat size={34} />
+          Kitchen Dashboard
+        </h1>
         <p className="text-gray-600">
           Active Orders: <span className="font-bold text-[#FF8C00]">{orders.length}</span>
         </p>
@@ -154,7 +157,10 @@ function KitchenDashboard() {
       {orders.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg">
           <p className="text-gray-600 text-lg">No pending orders</p>
-          <p className="text-gray-400 text-sm">Great! You're all caught up 🎉</p>
+          <p className="mt-2 inline-flex items-center gap-1 text-sm text-gray-400">
+            <PartyPopper size={14} />
+            Great! You're all caught up
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
