@@ -65,7 +65,7 @@ export const getRecommendations = () => {
 // order endpoints
 
 export const createOrder = (orderData) => {
-  return api.post('/orders', orderData)
+  return api.post('/orders/', orderData)
 }
 
 export const trackOrder = (orderId) => {
@@ -96,8 +96,16 @@ export const getHourlyTrends = () => {
   return api.get('/admin/analytics/hourly-trends')
 }
 
-export const getAllOrders = () => {
-  return api.get('/admin/orders/all')
+export const getAllOrders = (params = {}) => {
+  return api.get('/admin/orders/all', { params })
+}
+
+export const getAdminStats = () => {
+  return api.get('/admin/stats')
+}
+
+export const getTopItems = () => {
+  return api.get('/admin/analytics/top-items')
 }
 
 // Export the api instance for any custom calls

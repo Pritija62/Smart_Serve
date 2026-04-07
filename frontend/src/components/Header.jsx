@@ -1,6 +1,6 @@
 import React, { useContext } from 'react'
 import { AuthContext } from '../context/AuthContext'
-import { LogOut, User } from 'lucide-react'
+import { LogOut, User, UtensilsCrossed } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 function Header() {
@@ -18,7 +18,9 @@ function Header() {
         
         {/* Logo and Restaurant Name */}
         <div className="flex items-center gap-3">
-          <div className="text-3xl">🍔</div>
+          <div className="rounded-lg bg-orange-600 p-2">
+            <UtensilsCrossed size={24} />
+          </div>
           <div>
             <h1 className="text-2xl font-bold">Restaurant Name</h1>
             <p className="text-xs text-orange-100">Order with Ease</p>

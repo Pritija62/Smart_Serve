@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { OrderContext } from '../context/orderContext'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { ShoppingCart, Plus, Minus } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, UtensilsCrossed } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { getMenu } from '../services/api'
 
@@ -89,7 +89,10 @@ function MenuPage() {
     <div className="min-h-screen bg-[#F5F5F5]">
       {/* Page Title */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-[#FF8C00] mb-2">🍽️ Our Menu</h1>
+        <h1 className="mb-2 flex items-center gap-2 text-4xl font-bold text-[#FF8C00]">
+          <UtensilsCrossed size={34} />
+          Our Menu
+        </h1>
         <p className="text-gray-600">Choose your favorite dishes</p>
       </div>
 
@@ -105,7 +108,7 @@ function MenuPage() {
           >
             {/* Item Image Placeholder */}
             <div className="bg-gradient-to-r from-[#FF8C00] to-[#008080] h-40 flex items-center justify-center">
-              <span className="text-5xl">🍔</span>
+              <UtensilsCrossed size={52} className="text-white" />
             </div>
 
             {/* Item Details */}

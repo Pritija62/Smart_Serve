@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react'
 import { AuthContext } from '../context/AuthContext'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { CheckCircle, Clock, Trash2, RefreshCw } from 'lucide-react'
+import { CheckCircle, Clock, Trash2, RefreshCw, ChefHat, PartyPopper } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '../services/api'
 

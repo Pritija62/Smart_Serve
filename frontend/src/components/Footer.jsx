@@ -1,5 +1,5 @@
 import React from 'react'
-import { Phone, MapPin, Mail } from 'lucide-react'
+import { Phone, MapPin, Mail, UtensilsCrossed, Heart } from 'lucide-react'
 
 function Footer() {
   const currentYear = new Date().getFullYear()
@@ -13,7 +13,10 @@ function Footer() {
           
           {/* Restaurant Info */}
           <div>
-            <h3 className="text-2xl font-bold text-[#FF8C00] mb-4">🍔 Restaurant Name</h3>
+            <h3 className="mb-4 flex items-center gap-2 text-2xl font-bold text-[#FF8C00]">
+              <UtensilsCrossed size={24} />
+              Restaurant Name
+            </h3>
             <p className="text-gray-300 text-sm">
               Serving delicious food with love and care. Your satisfaction is our priority!
             </p>
@@ -72,8 +75,8 @@ function Footer() {
           {/* Copyright */}
           <div className="text-center text-gray-400 text-sm">
             <p>© {currentYear} Restaurant Name. All rights reserved.</p>
-            <p className="mt-2">
-              Built with ❤️ for food lovers
+            <p className="mt-2 inline-flex items-center gap-1">
+              Built with <Heart size={14} className="text-red-400" /> for food lovers
             </p>
           </div>
         </div>
