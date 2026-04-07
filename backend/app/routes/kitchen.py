@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_cors import cross_origin
-from app import db
+from app import db,socketio
 from app.models import Order, User
 import jwt
 import os
@@ -94,6 +94,7 @@ def update_order_status(order_id):
         order.completed_at = datetime.utcnow()
     
     db.session.commit()
+    socketio.emit('order_status_updated', order.to_dict())
     
     return jsonify({
         'message': 'Order updated',
