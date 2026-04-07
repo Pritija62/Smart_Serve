@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_cors import cross_origin
-from app import db
+from app import db, socketio
 from app.models import Order, OrderItem, MenuItem
 from datetime import datetime
 import uuid
@@ -53,6 +53,7 @@ def create_order():
         
         db.session.add(order)
         db.session.commit()
+        socketio.emit('new_order', order.to_dict())
         
         return jsonify({
             'order_id': order.id,
