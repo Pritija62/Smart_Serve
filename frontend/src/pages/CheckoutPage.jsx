@@ -32,6 +32,7 @@ function CheckoutPage() {
       status: responseData.status || 'PENDING',
       tableNumber: responseData.tableNumber ?? responseData.table_number ?? tableNumber,
       totalPrice: Number(responseData.totalPrice ?? responseData.total_price ?? total),
+      trackingToken: responseData.trackingToken ?? responseData.tracking_token,
     }
   }
 

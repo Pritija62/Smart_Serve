@@ -51,7 +51,7 @@ export const getCurrentUser = () => {
 // menu endpoints
 
 export const getMenu = () => {
-  return api.get('/menu')
+  return api.get('/menu/')
 }
 
 export const getMenuItemById = (id) => {

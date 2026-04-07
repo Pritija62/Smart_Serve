@@ -45,24 +45,34 @@ function TrackingPage() {
 
   // Effect 2: Listen for real-time order updates via Socket.IO
   useEffect(() => {
-    if (!socket) return
+  if (!socket || !orderId) return
 
-    // Listen for order status updates
-    socket.on('order_status_update', (data) => {
-      console.log('📨 Real-time update received:', data)
-      if (data.orderId === parseInt(orderId) || data.orderId === orderId) {
-        // Update order with new status
-        setOrder((prevOrder) => ({
-          ...prevOrder,
-          status: data.newStatus,
-        }))
-        setLastUpdated(new Date())
-      }
-    })
+  const onOrderStatusUpdated = (payload) => {
+    console.log('📨 Real-time update received:', payload)
 
-    // Cleanup listener when component unmounts
-    return () => socket.off('order_status_update')
-  }, [socket, orderId])
+    const payloadId = payload?.id ?? payload?.orderId ?? payload?.order_id
+    const payloadStatus = payload?.status ?? payload?.newStatus ?? payload?.new_status
+
+    if (payloadId == null) return
+    if (String(payloadId) !== String(orderId)) return
+
+    // If backend sends the full order, normalize it
+    if (payload?.order_items || payload?.table_number || payload?.created_at) {
+      setOrder(normalizeOrder(payload))
+    } else if (payloadStatus) {
+      // Otherwise just patch status
+      setOrder((prev) => (prev ? { ...prev, status: String(payloadStatus).toUpperCase() } : prev))
+    }
+
+    setLastUpdated(new Date())
+  }
+
+  socket.on('order_status_updated', onOrderStatusUpdated)
+
+  return () => {
+    socket.off('order_status_updated', onOrderStatusUpdated)
+  }
+}, [socket, orderId])
 
   // Effect 3: Update connection status
   useEffect(() => {
