@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useLocation, useSearchParams, useNavigate } from 'react-router-dom'
 import { SocketContext } from '../context/SocketContext'
 import { trackOrder } from '../services/api'
 import { buildMenuRoute } from '../utils/menuRoute'
+import { getTrackedOrdersForTable, upsertTrackedOrder } from '../utils/orderTracking'
 import { 
   Clock, 
   CheckCircle, 
@@ -31,20 +32,24 @@ function TrackingPage() {
   const socketContext = useContext(SocketContext) || {}
   const { socket = null, isConnected = false } = socketContext
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const tableNumber = searchParams.get('table') || localStorage.getItem('tableNumber')
   const menuRoute = buildMenuRoute(tableNumber)
+  const [trackedOrders, setTrackedOrders] = useState([])
 
   // ===== EFFECTS =====
 
   // Effect 1: Check if orderId passed via URL params
   useEffect(() => {
-    const idFromUrl = searchParams.get('orderId')
+    const idFromUrl = searchParams.get('orderId') || location.state?.orderId
     if (idFromUrl) {
       setOrderId(idFromUrl)
-      fetchOrder(idFromUrl)
+      if (!tableNumber) {
+        fetchOrder(idFromUrl)
+      }
     }
-  }, [searchParams])
+  }, [searchParams, location.state, tableNumber])
 
   // Effect 2: Listen for real-time order updates via Socket.IO
   useEffect(() => {
@@ -61,10 +66,20 @@ function TrackingPage() {
 
     // If backend sends the full order, normalize it
     if (payload?.order_items || payload?.table_number || payload?.created_at) {
-      setOrder(normalizeOrder(payload))
+      const normalizedOrder = normalizeOrder(payload)
+      setOrder(normalizedOrder)
+      upsertTrackedOrder(normalizedOrder)
+      setTrackedOrders(getTrackedOrdersForTable(normalizedOrder.tableNumber || tableNumber))
     } else if (payloadStatus) {
       // Otherwise just patch status
-      setOrder((prev) => (prev ? { ...prev, status: String(payloadStatus).toUpperCase() } : prev))
+      setOrder((prev) => {
+        if (!prev) return prev
+
+        const updatedOrder = { ...prev, status: String(payloadStatus).toUpperCase() }
+        upsertTrackedOrder(updatedOrder)
+        setTrackedOrders(getTrackedOrdersForTable(updatedOrder.tableNumber || tableNumber))
+        return updatedOrder
+      })
     }
 
     setLastUpdated(new Date())
@@ -118,7 +133,10 @@ function TrackingPage() {
 
       console.log('✅ Order fetched:', response.data)
 
-      setOrder(normalizeOrder(response.data))
+      const normalizedOrder = normalizeOrder(response.data)
+      setOrder(normalizedOrder)
+      upsertTrackedOrder(normalizedOrder)
+      setTrackedOrders(getTrackedOrdersForTable(normalizedOrder.tableNumber || tableNumber))
       setLastUpdated(new Date())
     } catch (err) {
       console.error('❌ Error fetching order:', err)
@@ -130,6 +148,32 @@ function TrackingPage() {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!tableNumber) {
+      setTrackedOrders([])
+      return
+    }
+
+    const tableOrders = getTrackedOrdersForTable(tableNumber)
+    setTrackedOrders(tableOrders)
+
+    const explicitOrderId = searchParams.get('orderId') || location.state?.orderId
+    const latestOrder = tableOrders[0]
+
+    if (explicitOrderId) {
+      if (String(explicitOrderId) !== String(orderId)) {
+        setOrderId(String(explicitOrderId))
+        fetchOrder(String(explicitOrderId))
+      }
+      return
+    }
+
+    if (latestOrder && String(latestOrder.orderId) !== String(orderId)) {
+      setOrderId(String(latestOrder.orderId))
+      fetchOrder(String(latestOrder.orderId))
+    }
+  }, [tableNumber, searchParams, location.state])
 
   // Handle search button click
   const handleSearch = (e) => {
@@ -298,15 +342,74 @@ function TrackingPage() {
           </h1>
           <button
             onClick={() => {
+              const latestOrder = trackedOrders[0]
+
+              if (latestOrder) {
+                setOrderId(String(latestOrder.orderId))
+                fetchOrder(String(latestOrder.orderId))
+                return
+              }
+
               setOrder(null)
               setOrderId('')
+              setSearched(false)
               setError(null)
             }}
             className="bg-[#008080] hover:bg-teal-700 text-white px-4 py-2 rounded-lg"
           >
-            Track Another
+            Show Latest
           </button>
         </div>
+
+        {trackedOrders.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-lg shadow-lg p-5 mb-6"
+          >
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">
+                  Table {tableNumber} Orders
+                </h2>
+                <p className="text-sm text-gray-600">
+                  New orders are added here automatically.
+                </p>
+              </div>
+              <span className="rounded-full bg-[#008080]/10 px-3 py-1 text-sm font-semibold text-[#008080]">
+                {trackedOrders.length} tracked
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {trackedOrders.map((trackedOrder) => (
+                <button
+                  key={trackedOrder.orderId}
+                  type="button"
+                  onClick={() => {
+                    setOrderId(String(trackedOrder.orderId))
+                    fetchOrder(String(trackedOrder.orderId))
+                  }}
+                  className={`rounded-lg border px-4 py-3 text-left transition hover:border-[#FF8C00] hover:bg-orange-50 ${
+                    String(trackedOrder.orderId) === String(orderId)
+                      ? 'border-[#FF8C00] bg-orange-50'
+                      : 'border-gray-200 bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-gray-800">Order #{trackedOrder.orderId}</p>
+                    <span className="text-xs font-semibold text-gray-600">
+                      {trackedOrder.status}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Rs {Number(trackedOrder.totalPrice || 0).toFixed(2)}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Connection Status */}
         <div
