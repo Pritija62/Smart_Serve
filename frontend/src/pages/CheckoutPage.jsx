@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle, AlertCircle, ShoppingBag } from 'lucide-react'
 import { OrderContext } from '../context/orderContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { createOrder } from '../services/api'
 import { buildMenuRoute, buildTableRoute } from '../utils/menuRoute'
+import { upsertTrackedOrder } from '../utils/orderTracking'
 
 function CheckoutPage() {
   const orderContextValue = useContext(OrderContext)
@@ -86,11 +87,31 @@ function CheckoutPage() {
       const response = await createOrder(payload)
       const normalizedResponse = getNormalizedResponse(response.data)
 
+      upsertTrackedOrder(
+        {
+          ...normalizedResponse,
+          items: cartItems.map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+        },
+        tableNumberValue
+      )
+
       setOrderedItems([...cartItems])
       setConfirmedOrder(normalizedResponse)
 
       // Keep checkout summary visible after confirmation.
       orderContextValue?.clearCart?.()
+
+      navigate(trackRoute, {
+        replace: true,
+        state: {
+          orderId: normalizedResponse.orderId,
+          tableNumber: tableNumberValue,
+        },
+      })
 
     } catch (err) {
       console.error('Checkout failed:', err)
@@ -160,7 +181,7 @@ function CheckoutPage() {
 
             <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Link
-                to={`${trackRoute}${trackRoute.includes('?') ? '&' : '?'}orderId=${encodeURIComponent(confirmedOrder.orderId)}`}
+                to={trackRoute}
                 className="rounded-lg bg-[#FF8C00] px-4 py-2.5 text-center font-semibold text-white transition hover:bg-orange-600"
               >
                 Track Order
