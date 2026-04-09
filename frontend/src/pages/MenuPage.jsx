@@ -1,25 +1,31 @@
 import React, { useState, useEffect, useContext } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { OrderContext } from '../context/orderContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { ShoppingCart, Plus, Minus, UtensilsCrossed } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { getMenu } from '../services/api'
+import { getMenu, getTables } from '../services/api'
 
 function MenuPage() {
-  const { addToCart } = useContext(OrderContext)
+  const { addToCart, tableNumber, updateTableNumber } = useContext(OrderContext)
+  const [searchParams] = useSearchParams()
   const [menuItems, setMenuItems] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [quantities, setQuantities] = useState({})
+  const [validTableNumbers, setValidTableNumbers] = useState([])
 
-  // Fetch menu items from backend
   useEffect(() => {
-    const fetchMenu = async () => {
+    const loadMenuAndTables = async () => {
       try {
         setIsLoading(true)
-        const response = await getMenu()
-        setMenuItems(response.data)
-        console.log('📋 Menu loaded:', response.data)
+
+        const [menuResponse, tablesResponse] = await Promise.all([getMenu(), getTables()])
+        setMenuItems(menuResponse.data)
+        setValidTableNumbers(
+          (tablesResponse.data || []).map((table) => String(table.number ?? table.table_number ?? table.id))
+        )
+        console.log('📋 Menu loaded:', menuResponse.data)
       } catch (err) {
         console.error('❌ Error loading menu:', err)
         setError('Failed to load menu. Please try again.')
@@ -35,8 +41,36 @@ function MenuPage() {
       }
     }
 
-    fetchMenu()
+    loadMenuAndTables()
   }, [])
+
+  useEffect(() => {
+    const tableParam = searchParams.get('table')
+
+    if (!tableParam) {
+      return
+    }
+
+    if (validTableNumbers.length === 0) {
+      return
+    }
+
+    const normalizedTable = String(tableParam).trim()
+
+    if (!/^\d+$/.test(normalizedTable)) {
+      setError('Invalid table number in the URL. Use a numeric table id.')
+      return
+    }
+
+    if (validTableNumbers.length > 0 && !validTableNumbers.includes(normalizedTable)) {
+      setError(`Table ${normalizedTable} does not exist.`)
+      return
+    }
+
+    if (normalizedTable) {
+      updateTableNumber(normalizedTable)
+    }
+  }, [searchParams, updateTableNumber, validTableNumbers])
 
   // Handle quantity changes
   const handleQuantityChange = (itemId, change) => {
@@ -94,6 +128,11 @@ function MenuPage() {
           Our Menu
         </h1>
         <p className="text-gray-600">Choose your favorite dishes</p>
+        {tableNumber && (
+          <p className="mt-2 inline-flex rounded-full bg-[#008080]/10 px-3 py-1 text-sm font-semibold text-[#008080]">
+            Table #{tableNumber}
+          </p>
+        )}
       </div>
 
       {/* Menu Grid */}

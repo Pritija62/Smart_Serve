@@ -107,14 +107,20 @@ export const OrderProvider = ({ children }) => {
   const clearCart = () => {
     console.log("clear cart")
     setCartItems([])
-    setTableNumber('')
     localStorage.removeItem('cart')
-    localStorage.removeItem('tableNumber')
   }
 
   // Update table number
   const updateTableNumber = (number) => {
-    setTableNumber(number)
+    const normalizedNumber = String(number).trim()
+
+    setTableNumber(normalizedNumber)
+
+    if (normalizedNumber) {
+      localStorage.setItem('tableNumber', normalizedNumber)
+    } else {
+      localStorage.removeItem('tableNumber')
+    }
   }
 
   // Value to provide to all components

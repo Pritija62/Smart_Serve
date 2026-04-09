@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { OrderContext } from '../context/orderContext'
+import { buildMenuRoute } from '../utils/menuRoute'
 
 const MOCK_CART_ITEMS = [
   { id: 1, name: 'Burger', quantity: 2, price: 150 },
@@ -23,6 +24,7 @@ function CartPage() {
   const tableNumber = contextUnavailable
     ? MOCK_TABLE_NUMBER
     : orderContextValue.tableNumber || MOCK_TABLE_NUMBER
+  const menuRoute = buildMenuRoute(tableNumber)
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -139,7 +141,7 @@ function CartPage() {
             <h2 className="mb-2 text-xl font-bold text-gray-700">Empty Cart</h2>
             <p className="mb-5 text-gray-500">Add delicious items from the menu to get started.</p>
             <Link
-              to="/menu"
+              to={menuRoute}
               className="inline-flex items-center justify-center rounded-lg bg-[#FF8C00] px-5 py-2.5 font-semibold text-white transition hover:bg-orange-600"
             >
               Continue Shopping
@@ -246,7 +248,7 @@ function CartPage() {
 
               <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
                 <Link
-                  to="/menu"
+                  to={menuRoute}
                   className="rounded-lg bg-[#008080] px-4 py-2.5 text-center font-semibold text-white transition hover:bg-teal-700"
                 >
                   Continue Shopping

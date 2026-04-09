@@ -54,6 +54,10 @@ export const getMenu = () => {
   return api.get('/menu/')
 }
 
+export const getTables = () => {
+  return api.get('/tables/')
+}
+
 export const getMenuItemById = (id) => {
   return api.get(`/menu/${id}`)
 }

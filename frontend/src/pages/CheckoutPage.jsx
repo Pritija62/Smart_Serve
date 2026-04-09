@@ -5,6 +5,7 @@ import { CheckCircle, AlertCircle, ShoppingBag } from 'lucide-react'
 import { OrderContext } from '../context/orderContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { createOrder } from '../services/api'
+import { buildMenuRoute } from '../utils/menuRoute'
 
 function CheckoutPage() {
   const orderContextValue = useContext(OrderContext)
@@ -15,7 +16,8 @@ function CheckoutPage() {
   const [orderedItems, setOrderedItems] = useState([])
 
   const cartItems = orderContextValue?.cartItems || []
-  const tableNumber = orderContextValue?.tableNumber || localStorage.getItem('tableNumber') || '5'
+  const tableNumber = orderContextValue?.tableNumber || localStorage.getItem('tableNumber') || ''
+  const menuRoute = buildMenuRoute(tableNumber)
   const hasItems = cartItems.length > 0
 
   const subtotal = useMemo(() => {
@@ -47,7 +49,7 @@ function CheckoutPage() {
 
       const tableNumberValue = String(tableNumber).trim()
       if (!tableNumberValue) {
-        throw new Error('Table number is required before placing order.')
+        throw new Error('Table number is required. Open the menu using your table QR code first.')
       }
 
       const orderItems = cartItems.map((item) => ({
@@ -144,7 +146,7 @@ function CheckoutPage() {
                 Track Order
               </Link>
               <Link
-                to="/menu"
+                to={menuRoute}
                 onClick={handleOrderMore}
                 className="rounded-lg bg-[#008080] px-4 py-2.5 text-center font-semibold text-white transition hover:bg-teal-700"
               >
@@ -171,7 +173,9 @@ function CheckoutPage() {
             Checkout
           </h1>
           <p className="text-gray-600">Review your order and confirm table details.</p>
-          <p className="mt-2 text-sm font-semibold text-gray-700">Table Number: {tableNumber}</p>
+          <p className="mt-2 text-sm font-semibold text-gray-700">
+            Table Number: {tableNumber || 'Not set'}
+          </p>
         </div>
 
         <AnimatePresence>
@@ -193,7 +197,7 @@ function CheckoutPage() {
             <h2 className="text-xl font-bold text-gray-700">Your cart is empty</h2>
             <p className="mt-2 text-gray-500">Add items before proceeding to checkout.</p>
             <Link
-              to="/menu"
+              to={menuRoute}
               className="mt-5 inline-flex rounded-lg bg-[#008080] px-5 py-2.5 font-semibold text-white transition hover:bg-teal-700"
             >
               Continue Shopping

@@ -4,11 +4,13 @@ import { OrderContext } from '../context/orderContext'
 import { Menu, X, Home, UtensilsCrossed, ShoppingCart, Truck, BarChart3, ListTodo } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { buildMenuRoute } from '../utils/menuRoute'
 
 function Navbar() {
   const { isLoggedIn, user } = useContext(AuthContext)
   const orderContextValue = useContext(OrderContext)
   const cartQuantity = orderContextValue?.totalQuantity || 0
+  const menuRoute = buildMenuRoute(orderContextValue?.tableNumber || localStorage.getItem('tableNumber'))
   const location = useLocation()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -18,7 +20,7 @@ function Navbar() {
       // Customer links (not logged in)
       return [
         { name: 'Home', href: '/', icon: Home },
-        { name: 'Menu', href: '/menu', icon: UtensilsCrossed },
+        { name: 'Menu', href: menuRoute, icon: UtensilsCrossed },
         { name: 'Cart', href: '/cart', icon: ShoppingCart },
         { name: 'Track Order', href: '/track', icon: Truck },
       ]
@@ -44,7 +46,7 @@ function Navbar() {
   }
 
   const navLinks = getNavLinks()
-  const isActive = (href) => location.pathname === href
+  const isActive = (href) => location.pathname === href.split('?')[0]
 
   return (
     <>
