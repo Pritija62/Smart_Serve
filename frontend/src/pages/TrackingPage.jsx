@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { SocketContext } from '../context/SocketContext'
 import { trackOrder } from '../services/api'
+import { buildMenuRoute } from '../utils/menuRoute'
 import { 
   Clock, 
   CheckCircle, 
@@ -31,6 +32,8 @@ function TrackingPage() {
   const { socket = null, isConnected = false } = socketContext
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const tableNumber = localStorage.getItem('tableNumber')
+  const menuRoute = buildMenuRoute(tableNumber)
 
   // ===== EFFECTS =====
 
@@ -418,7 +421,7 @@ function TrackingPage() {
             </p>
             <div className="flex gap-4 justify-center">
               <button
-                onClick={() => navigate('/menu')}
+                onClick={() => navigate(menuRoute)}
                 className="bg-[#FF8C00] hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg"
               >
                 Order More

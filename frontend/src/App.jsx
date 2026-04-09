@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext'
 import { OrderProvider } from './context/orderContext'
 import { SocketProvider } from './context/SocketContext'
 import Layout from './components/Layout'
+import { buildMenuRoute } from './utils/menuRoute'
 
 // Import pages
 import MenuPage from './pages/MenuPage'
@@ -18,6 +19,9 @@ import AnalyticsPage from './pages/AnalyticsPage'
 import OrderHistoryPage from './pages/OrderHistoryPage'
 
 function App() {
+  const savedTableNumber = localStorage.getItem('tableNumber')
+  const menuRoute = buildMenuRoute(savedTableNumber)
+
   return (
     <Router>
       <AuthProvider>
@@ -39,7 +43,7 @@ function App() {
                     </p>
                     <div className="space-y-4">
                       <a
-                        href="/menu"
+                        href={menuRoute}
                         className="inline-block bg-[#FF8C00] hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition"
                       >
                         Browse Menu

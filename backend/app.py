@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
 from app import create_app, db, socketio
-from app.models import User, MenuItem, Order, OrderItem
-from app.routes import auth_bp, menu_bp, orders_bp, kitchen_bp, admin_bp
+from app.models import User, MenuItem, Order, OrderItem, ensure_default_tables
+from app.routes import auth_bp, menu_bp, orders_bp, kitchen_bp, admin_bp, tables_bp
 
 load_dotenv()
 
@@ -14,10 +14,12 @@ app.register_blueprint(menu_bp)
 app.register_blueprint(orders_bp)
 app.register_blueprint(kitchen_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(tables_bp)
 
 # Create tables
 with app.app_context():
     db.create_all()
+    ensure_default_tables()
     print("✅ Database tables created")
 
 

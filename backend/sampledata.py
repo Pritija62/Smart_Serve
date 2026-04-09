@@ -1,12 +1,15 @@
 from app import create_app, db
-from app.models import User, MenuItem, Order, OrderItem
+from app.models import User, MenuItem, Order, OrderItem, DiningTable, ensure_default_tables
 
 # Create app context
 app, db, socketio = create_app()
 
 with app.app_context():
+    db.create_all()
+
     # Clear existing data 
     print(" Clearing existing data...")
+    db.session.query(DiningTable).delete()
     db.session.query(OrderItem).delete()
     db.session.query(Order).delete()
     db.session.query(MenuItem).delete()
@@ -162,11 +165,16 @@ with app.app_context():
     
     db.session.commit()
     print(f" {len(menu_items)} menu items created")
+
+    print("\n  Creating restaurant tables...")
+    ensure_default_tables()
+    print(f"   {DiningTable.query.count()} tables created")
     
     # DISPLAY SUMMARY
     print("\n DATABASE SUMMARY:")
     print(f"   Total Users: {User.query.count()}")
     print(f"   Total Menu Items: {MenuItem.query.count()}")
+    print(f"   Total Tables: {DiningTable.query.count()}")
     print(f"   Total Orders: {Order.query.count()}")
     
     print("\nSample data created successfully!")

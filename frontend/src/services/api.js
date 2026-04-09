@@ -10,7 +10,7 @@ const api = axios.create({
 
 // Interceptor to add token to all requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+      const token = sessionStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -23,7 +23,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Token expired or invalid
-      localStorage.removeItem('token')
+        sessionStorage.removeItem('token')
       window.location.href = '/login'
     }
     return Promise.reject(error)
@@ -31,10 +31,6 @@ api.interceptors.response.use(
 )
 
 // auth endpoints
-
-export const loginUser = (email, password) => {
-  return api.post('/auth/login', { email, password })
-}
 
 export const loginKitchen = (email, password) => {
   return api.post('/auth/kitchen-login', { email, password })
@@ -52,6 +48,10 @@ export const getCurrentUser = () => {
 
 export const getMenu = () => {
   return api.get('/menu/')
+}
+
+export const getTables = () => {
+  return api.get('/tables/')
 }
 
 export const getMenuItemById = (id) => {

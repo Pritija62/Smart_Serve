@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   CheckCircle2,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { getAllOrders } from '../services/api'
+import { SocketContext } from '../context/SocketContext'
 
 const PAGE_SIZE = 50
 
@@ -129,11 +130,12 @@ const isInDateFilter = (iso, dateFilter) => {
 }
 
 function OrderHistoryPage() {
+  const { socket, isConnected } = useContext(SocketContext)
   const [orders, setOrders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [statusFilter, setStatusFilter] = useState('All')
-  const [dateFilter, setDateFilter] = useState('Today')
+  const [dateFilter, setDateFilter] = useState('All')
   const [searchInput, setSearchInput] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' })
@@ -141,48 +143,64 @@ function OrderHistoryPage() {
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [successMessage, setSuccessMessage] = useState('')
 
+  const fetchOrders = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const response = await getAllOrders({
+        status: statusFilter,
+        date: dateFilter,
+        q: searchTerm,
+        page: currentPage,
+        limit: PAGE_SIZE,
+      })
+
+      const payload = Array.isArray(response?.data) ? response.data : []
+      const normalized = payload.map((order) => ({
+        id: order.id,
+        tableNumber: order.tableNumber || order.table_number || '-',
+        items:
+          (order.order_items || order.items || []).map((item) => ({
+            name: item.menu_item?.name || item.name || 'Item',
+            quantity: item.quantity || 1,
+          })) || [],
+        status: (order.status || 'PENDING').toString().toUpperCase(),
+        totalPrice: Number(order.totalPrice || order.total_price || 0),
+        createdAt: order.createdAt || order.created_at,
+        startedAt: order.startedAt || order.started_at || null,
+        readyAt: order.readyAt || order.ready_at || null,
+        completedAt: order.completedAt || order.completed_at || null,
+      }))
+
+      setOrders(normalized)
+      setError(null)
+    } catch (err) {
+      console.error('Failed to load order history:', err)
+      setOrders([])
+      setError('Unable to load live order history.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [statusFilter, dateFilter, searchTerm, currentPage])
+
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setIsLoading(true)
-        const response = await getAllOrders({
-          status: statusFilter,
-          date: dateFilter,
-          q: searchTerm,
-          page: currentPage,
-          limit: PAGE_SIZE,
-        })
+    fetchOrders()
+  }, [fetchOrders])
 
-        const payload = Array.isArray(response?.data) ? response.data : []
-        const normalized = payload.map((order) => ({
-          id: order.id,
-          tableNumber: order.tableNumber || order.table_number || '-',
-          items:
-            (order.order_items || order.items || []).map((item) => ({
-              name: item.menu_item?.name || item.name || 'Item',
-              quantity: item.quantity || 1,
-            })) || [],
-          status: (order.status || 'PENDING').toString().toUpperCase(),
-          totalPrice: Number(order.totalPrice || order.total_price || 0),
-          createdAt: order.createdAt || order.created_at,
-          startedAt: order.startedAt || order.started_at || null,
-          readyAt: order.readyAt || order.ready_at || null,
-          completedAt: order.completedAt || order.completed_at || null,
-        }))
+  useEffect(() => {
+    if (!socket || !isConnected) return undefined
 
-        setOrders(normalized.length > 0 ? normalized : MOCK_ORDERS)
-        setError(null)
-      } catch (err) {
-        console.error('Failed to load order history:', err)
-        setOrders(MOCK_ORDERS)
-        setError('Unable to load live order history. Showing sample data.')
-      } finally {
-        setIsLoading(false)
-      }
+    const handleRefresh = () => {
+      fetchOrders()
     }
 
-    fetchOrders()
-  }, [statusFilter, dateFilter, searchTerm, currentPage])
+    socket.on('new_order', handleRefresh)
+    socket.on('order_status_updated', handleRefresh)
+
+    return () => {
+      socket.off('new_order', handleRefresh)
+      socket.off('order_status_updated', handleRefresh)
+    }
+  }, [socket, isConnected, fetchOrders])
 
   useEffect(() => {
     setCurrentPage(1)

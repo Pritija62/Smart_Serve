@@ -1,5 +1,6 @@
 import React, { createContext, useEffect, useState } from 'react'
-import { io } from 'socket.io-client'
+import { socket } from '../services/socket'
+
 
 // Create the context
 export const SocketContext = createContext()
@@ -7,52 +8,44 @@ export const SocketContext = createContext()
 const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
 // Provider component
 export function SocketProvider({ children }) {
-  const [socket, setSocket] = useState(null)
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    // ===== CONNECT TO BACKEND =====
     console.log('🔌 Connecting to Socket.IO server...')
 
-    const newSocket = io(socketUrl, {
-  reconnection: true,
-  reconnectionDelay: 1000,
-  reconnectionDelayMax: 5000,
-  reconnectionAttempts: 5,
-  transports: ['websocket', 'polling'],
-})
-
-    // ===== SOCKET EVENTS =====
-
-    // When connection is established
-    newSocket.on('connect', () => {
-      console.log('✅ Socket connected! ID:', newSocket.id)
+    const handleConnect = () => {
+      console.log('✅ Socket connected! ID:', socket.id)
       setIsConnected(true)
-    })
+    }
 
-    // When disconnected
-    newSocket.on('disconnect', () => {
+    const handleDisconnect = () => {
       console.log('❌ Socket disconnected')
       setIsConnected(false)
-    })
+    }
 
-    // Connection error
-    newSocket.on('connect_error', (error) => {
+    const handleConnectError = (error) => {
       console.error('⚠️ Connection error:', error)
-    })
+    }
 
-    // Reconnection attempt
-    newSocket.on('reconnect_attempt', () => {
+    const handleReconnectAttempt = () => {
       console.log('🔄 Attempting to reconnect...')
-    })
+    }
 
-    // Save socket to state
-    setSocket(newSocket)
+    socket.on('connect', handleConnect)
+    socket.on('disconnect', handleDisconnect)
+    socket.on('connect_error', handleConnectError)
+    socket.on('reconnect_attempt', handleReconnectAttempt)
 
-    // ===== CLEANUP =====
+    if (socket.connected) {
+      setIsConnected(true)
+    }
+
     return () => {
-      console.log('🧹 Cleaning up Socket.IO connection')
-      newSocket.close()
+      console.log('🧹 Cleaning up Socket.IO connection listeners')
+      socket.off('connect', handleConnect)
+      socket.off('disconnect', handleDisconnect)
+      socket.off('connect_error', handleConnectError)
+      socket.off('reconnect_attempt', handleReconnectAttempt)
     }
   }, [])
 
