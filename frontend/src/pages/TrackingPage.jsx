@@ -4,6 +4,7 @@ import { SocketContext } from '../context/SocketContext'
 import { trackOrder } from '../services/api'
 import { buildMenuRoute } from '../utils/menuRoute'
 import { getTrackedOrdersForTable, upsertTrackedOrder } from '../utils/orderTracking'
+import { formatTimeInAppZone } from '../utils/time'
 import { 
   Clock, 
   CheckCircle, 
@@ -238,6 +239,15 @@ function TrackingPage() {
     }
   }
 
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'PREPARING':
+        return 'ORDER STARTED'
+      default:
+        return status
+    }
+  }
+
   // Format time
   const formatTime = (dateString) => {
     return formatTimeInAppZone(dateString)
@@ -396,7 +406,7 @@ function TrackingPage() {
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-semibold text-gray-800">Order #{trackedOrder.orderId}</p>
                     <span className="text-xs font-semibold text-gray-600">
-                      {trackedOrder.status}
+                      {getStatusLabel(trackedOrder.status)}
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-gray-600">
@@ -477,7 +487,7 @@ function TrackingPage() {
                 {(order.status === 'READY' || order.status === 'COMPLETED') && (
                   <CheckCircle size={16} />
                 )}
-                {order.status}
+                {getStatusLabel(order.status)}
               </span>
             </div>
 
@@ -569,7 +579,7 @@ function TrackingPage() {
               </div>
             </motion.div>
 
-            {/* Item 2: Started Preparing (show if PREPARING or later) */}
+            {/* Item 2: Order Started (show if PREPARING or later) */}
             {['PREPARING', 'READY', 'COMPLETED'].includes(order.status) && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -583,7 +593,7 @@ function TrackingPage() {
                 </div>
                 <div className="pt-1">
                   <p className="font-semibold text-gray-800">
-                    Started Preparing
+                    Order Started
                   </p>
                   <p className="text-sm text-gray-600">
                     ~{formatTime(order.createdAt)} +3 mins
@@ -592,7 +602,7 @@ function TrackingPage() {
               </motion.div>
             )}
 
-            {/* Item 3: Almost Ready (show if READY or COMPLETED) */}
+            {/* Item 3: Ready for Pickup (show if READY or COMPLETED) */}
             {['READY', 'COMPLETED'].includes(order.status) && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -602,30 +612,9 @@ function TrackingPage() {
               >
                 <div className="flex flex-col items-center">
                   <CheckCircle size={24} className="text-green-600" />
-                  <div className="w-1 h-12 bg-green-300 mt-2"></div>
                 </div>
                 <div className="pt-1">
-                  <p className="font-semibold text-gray-800">Almost Ready</p>
-                  <p className="text-sm text-gray-600">
-                    ~{formatTime(order.createdAt)} +7 mins
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Item 4: Ready for Pickup (show if READY or COMPLETED) */}
-            {['READY', 'COMPLETED'].includes(order.status) && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-                className="flex gap-4"
-              >
-                <div className="flex flex-col items-center">
-                  <CheckCircle size={24} className="text-green-600" />
-                </div>
-                <div className="pt-1">
-                  <p className="font-semibold text-gray-800">Ready for Pickup</p>
+                  <p className="font-semibold text-gray-800">Order Ready</p>
                   <p className="text-sm text-gray-600">
                     ~{formatTime(order.createdAt)} +10 mins
                   </p>
