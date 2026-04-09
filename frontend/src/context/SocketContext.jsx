@@ -4,6 +4,7 @@ import { io } from 'socket.io-client'
 // Create the context
 export const SocketContext = createContext()
 
+const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
 // Provider component
 export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null)
@@ -13,13 +14,13 @@ export function SocketProvider({ children }) {
     // ===== CONNECT TO BACKEND =====
     console.log('🔌 Connecting to Socket.IO server...')
 
-    const newSocket = io('http://localhost:5000', {
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 5,
-      transports: ['websocket', 'polling'],
-    })
+    const newSocket = io(socketUrl, {
+  reconnection: true,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  reconnectionAttempts: 5,
+  transports: ['websocket', 'polling'],
+})
 
     // ===== SOCKET EVENTS =====
 
