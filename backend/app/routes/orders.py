@@ -61,7 +61,10 @@ def create_order():
         
         db.session.add(order)
         db.session.commit()
-        socketio.emit('new_order', order.to_dict())
+        order_payload = order.to_dict()
+        order_payload['orderId'] = order.id
+        socketio.emit('new_order', order_payload, room='role_kitchen')
+        socketio.emit('new_order', order_payload, room='role_admin')
         
         return jsonify({
             'order_id': order.id,

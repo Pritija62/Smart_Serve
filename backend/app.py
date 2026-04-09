@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from app import create_app, db, socketio
 from app.models import User, MenuItem, Order, OrderItem, ensure_default_tables
 from app.routes import auth_bp, menu_bp, orders_bp, kitchen_bp, admin_bp, tables_bp
+from flask_socketio import join_room, leave_room
 
 load_dotenv()
 
@@ -35,6 +36,62 @@ def handle_connect():
 def handle_disconnect():
     """Handle client disconnection"""
     print("❌ Client disconnected")
+
+
+@socketio.on('join_role_room')
+def handle_join_role_room(data):
+    """Join role-scoped room (kitchen/admin) for targeted updates."""
+    role = str((data or {}).get('role', '')).strip().lower()
+
+    if role not in {'kitchen', 'admin'}:
+        return {'ok': False, 'error': 'Invalid role room'}
+
+    room_name = f'role_{role}'
+    join_room(room_name)
+    print(f"✅ Joined room: {room_name}")
+    return {'ok': True, 'room': room_name}
+
+
+@socketio.on('leave_role_room')
+def handle_leave_role_room(data):
+    """Leave role-scoped room."""
+    role = str((data or {}).get('role', '')).strip().lower()
+
+    if role not in {'kitchen', 'admin'}:
+        return {'ok': False, 'error': 'Invalid role room'}
+
+    room_name = f'role_{role}'
+    leave_room(room_name)
+    print(f"↪️ Left room: {room_name}")
+    return {'ok': True, 'room': room_name}
+
+
+@socketio.on('join_order_room')
+def handle_join_order_room(data):
+    """Join order-specific room for customer tracking page updates."""
+    order_id = str((data or {}).get('orderId', '')).strip()
+
+    if not order_id.isdigit():
+        return {'ok': False, 'error': 'Invalid order id'}
+
+    room_name = f'order_{order_id}'
+    join_room(room_name)
+    print(f"✅ Joined room: {room_name}")
+    return {'ok': True, 'room': room_name}
+
+
+@socketio.on('leave_order_room')
+def handle_leave_order_room(data):
+    """Leave order-specific room."""
+    order_id = str((data or {}).get('orderId', '')).strip()
+
+    if not order_id.isdigit():
+        return {'ok': False, 'error': 'Invalid order id'}
+
+    room_name = f'order_{order_id}'
+    leave_room(room_name)
+    print(f"↪️ Left room: {room_name}")
+    return {'ok': True, 'room': room_name}
 
 
 @socketio.on('order_placed')

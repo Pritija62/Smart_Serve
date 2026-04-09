@@ -16,6 +16,7 @@ import {
 import LoadingSpinner from '../components/LoadingSpinner'
 import { getAllOrders } from '../services/api'
 import { SocketContext } from '../context/SocketContext'
+import { formatTimeInAppZone } from '../utils/time'
 
 const PAGE_SIZE = 50
 
@@ -90,10 +91,8 @@ const statusConfig = {
 }
 
 const formatTime = (iso) => {
-  if (!iso) return '--'
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return '--'
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const formatted = formatTimeInAppZone(iso)
+  return formatted === 'N/A' ? '--' : formatted
 }
 
 const isInDateFilter = (iso, dateFilter) => {
@@ -189,6 +188,8 @@ function OrderHistoryPage() {
   useEffect(() => {
     if (!socket || !isConnected) return undefined
 
+    socket.emit('join_role_room', { role: 'admin' })
+
     const handleRefresh = () => {
       fetchOrders()
     }
@@ -197,6 +198,7 @@ function OrderHistoryPage() {
     socket.on('order_status_updated', handleRefresh)
 
     return () => {
+      socket.emit('leave_role_room', { role: 'admin' })
       socket.off('new_order', handleRefresh)
       socket.off('order_status_updated', handleRefresh)
     }
