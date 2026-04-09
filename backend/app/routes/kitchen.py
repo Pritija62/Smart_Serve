@@ -94,7 +94,11 @@ def update_order_status(order_id):
         order.completed_at = datetime.utcnow()
     
     db.session.commit()
-    socketio.emit('order_status_updated', order.to_dict())
+    order_payload = order.to_dict()
+    order_payload['orderId'] = order.id
+    socketio.emit('order_status_updated', order_payload, room='role_kitchen')
+    socketio.emit('order_status_updated', order_payload, room='role_admin')
+    socketio.emit('order_status_updated', order_payload, room=f'order_{order.id}')
     
     return jsonify({
         'message': 'Order updated',

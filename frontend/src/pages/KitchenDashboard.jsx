@@ -4,6 +4,7 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import { CheckCircle, Clock, Trash2, RefreshCw, ChefHat, PartyPopper } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '../services/api'
+import { formatTimeInAppZone } from '../utils/time'
 
 
 // ✅ add this (you must create socket client file as shown below)
@@ -63,6 +64,8 @@ function KitchenDashboard() {
 useEffect(() => {
   if (!isLoggedIn) return
 
+  socket.emit('join_role_room', { role: 'kitchen' })
+
   const onNewOrder = () => {
     fetchOrders()
   }
@@ -75,6 +78,7 @@ useEffect(() => {
   socket.on('order_status_updated', onOrderStatusUpdated)
 
   return () => {
+    socket.emit('leave_role_room', { role: 'kitchen' })
     socket.off('new_order', onNewOrder)
     socket.off('order_status_updated', onOrderStatusUpdated)
   }
@@ -203,7 +207,7 @@ useEffect(() => {
               </div>
 
               <p className="text-sm text-gray-500 mb-4">
-                Order time: {new Date(order.createdAt).toLocaleTimeString()}
+                Order time: {formatTimeInAppZone(order.createdAt)}
               </p>
 
               <div className="flex gap-2">

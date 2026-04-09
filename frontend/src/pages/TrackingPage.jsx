@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { SocketContext } from '../context/SocketContext'
 import { trackOrder } from '../services/api'
 import { buildMenuRoute } from '../utils/menuRoute'
+import { formatTimeInAppZone } from '../utils/time'
 import { 
   Clock, 
   CheckCircle, 
@@ -50,6 +51,8 @@ function TrackingPage() {
   useEffect(() => {
   if (!socket || !orderId) return
 
+    socket.emit('join_order_room', { orderId: String(orderId) })
+
   const onOrderStatusUpdated = (payload) => {
     console.log('📨 Real-time update received:', payload)
 
@@ -73,6 +76,7 @@ function TrackingPage() {
   socket.on('order_status_updated', onOrderStatusUpdated)
 
   return () => {
+    socket.emit('leave_order_room', { orderId: String(orderId) })
     socket.off('order_status_updated', onOrderStatusUpdated)
   }
 }, [socket, orderId])
@@ -193,13 +197,7 @@ function TrackingPage() {
 
   // Format time
   const formatTime = (dateString) => {
-    if (!dateString) return 'N/A'
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    })
+    return formatTimeInAppZone(dateString)
   }
 
   // ===== RENDER: SEARCH SECTION =====
@@ -609,7 +607,7 @@ function TrackingPage() {
           </p>
           {lastUpdated && (
             <p className="text-xs text-gray-500">
-              Last updated: {lastUpdated.toLocaleTimeString()}
+              Last updated: {formatTimeInAppZone(lastUpdated)}
             </p>
           )}
         </motion.div>
