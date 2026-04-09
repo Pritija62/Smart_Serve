@@ -1,23 +1,43 @@
-import React, { useContext, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useContext, useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle, AlertCircle, ShoppingBag } from 'lucide-react'
 import { OrderContext } from '../context/orderContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { createOrder } from '../services/api'
-import { buildMenuRoute } from '../utils/menuRoute'
+import { buildMenuRoute, buildTableRoute } from '../utils/menuRoute'
 
 function CheckoutPage() {
   const orderContextValue = useContext(OrderContext)
+  const [searchParams] = useSearchParams()
   const [specialInstructions, setSpecialInstructions] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [confirmedOrder, setConfirmedOrder] = useState(null)
   const [orderedItems, setOrderedItems] = useState([])
 
+  const tableParam = searchParams.get('table')
+  const normalizedTableParam = String(tableParam || '').trim()
+
+  useEffect(() => {
+    if (
+      normalizedTableParam &&
+      orderContextValue?.updateTableNumber &&
+      normalizedTableParam !== String(orderContextValue?.tableNumber || '').trim()
+    ) {
+      orderContextValue.updateTableNumber(normalizedTableParam)
+    }
+  }, [normalizedTableParam, orderContextValue])
+
   const cartItems = orderContextValue?.cartItems || []
-  const tableNumber = orderContextValue?.tableNumber || localStorage.getItem('tableNumber') || ''
+  const tableNumber =
+    orderContextValue?.tableNumber ||
+    normalizedTableParam ||
+    localStorage.getItem('tableNumber') ||
+    ''
   const menuRoute = buildMenuRoute(tableNumber)
+  const cartRoute = buildTableRoute('/cart', tableNumber)
+  const trackRoute = buildTableRoute('/track', tableNumber)
   const hasItems = cartItems.length > 0
 
   const subtotal = useMemo(() => {
@@ -140,7 +160,7 @@ function CheckoutPage() {
 
             <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Link
-                to={`/track?orderId=${confirmedOrder.orderId}`}
+                to={`${trackRoute}${trackRoute.includes('?') ? '&' : '?'}orderId=${encodeURIComponent(confirmedOrder.orderId)}`}
                 className="rounded-lg bg-[#FF8C00] px-4 py-2.5 text-center font-semibold text-white transition hover:bg-orange-600"
               >
                 Track Order
@@ -269,7 +289,7 @@ function CheckoutPage() {
               </button>
 
               <Link
-                to="/cart"
+                to={cartRoute}
                 className="mt-3 inline-flex w-full justify-center rounded-lg bg-[#008080] px-4 py-2.5 font-semibold text-white transition hover:bg-teal-700"
               >
                 Cancel Order

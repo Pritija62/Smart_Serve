@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext'
 import { OrderProvider } from './context/orderContext'
 import { SocketProvider } from './context/SocketContext'
 import Layout from './components/Layout'
+import CustomerTableGuard from './components/CustomerTableGuard'
 import { buildMenuRoute } from './utils/menuRoute'
 
 // Import pages
@@ -21,6 +22,7 @@ import OrderHistoryPage from './pages/OrderHistoryPage'
 function App() {
   const savedTableNumber = localStorage.getItem('tableNumber')
   const menuRoute = buildMenuRoute(savedTableNumber)
+  const isTableRequired = new URLSearchParams(window.location.search).get('tableRequired') === '1'
 
   return (
     <Router>
@@ -41,6 +43,11 @@ function App() {
                     <p className="text-gray-600 text-lg mb-8">
                       Choose an option from the menu above to get started.
                     </p>
+                    {isTableRequired && (
+                      <p className="mx-auto mb-6 max-w-xl rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                        Table session is missing. Please scan your table QR code to continue ordering.
+                      </p>
+                    )}
                     <div className="space-y-4">
                       <a
                         href={menuRoute}
@@ -60,10 +67,10 @@ function App() {
               />
 
               {/* Customer Pages */}
-              <Route path="/menu" element={<MenuPage />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/checkout" element={<CheckoutPage />} />
-              <Route path="/track" element={<TrackingPage/> } />
+              <Route path="/menu" element={<CustomerTableGuard><MenuPage /></CustomerTableGuard>} />
+              <Route path="/cart" element={<CustomerTableGuard><CartPage /></CustomerTableGuard>} />
+              <Route path="/checkout" element={<CustomerTableGuard><CheckoutPage /></CustomerTableGuard>} />
+              <Route path="/track" element={<CustomerTableGuard><TrackingPage /></CustomerTableGuard>} />
               <Route path="/login" element={<LoginPage />} />
 
               {/* Kitchen Pages */}

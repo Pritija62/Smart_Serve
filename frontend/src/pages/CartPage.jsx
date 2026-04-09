@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { OrderContext } from '../context/orderContext'
-import { buildMenuRoute } from '../utils/menuRoute'
+import { buildMenuRoute, buildTableRoute } from '../utils/menuRoute'
 
 const MOCK_CART_ITEMS = [
   { id: 1, name: 'Burger', quantity: 2, price: 150 },
@@ -16,6 +16,7 @@ const MOCK_TABLE_NUMBER = 5
 
 function CartPage() {
   const orderContextValue = useContext(OrderContext)
+  const [searchParams] = useSearchParams()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -25,6 +26,23 @@ function CartPage() {
     ? MOCK_TABLE_NUMBER
     : orderContextValue.tableNumber || MOCK_TABLE_NUMBER
   const menuRoute = buildMenuRoute(tableNumber)
+  const checkoutRoute = buildTableRoute('/checkout', tableNumber)
+
+  useEffect(() => {
+    if (contextUnavailable) {
+      return
+    }
+
+    const tableParam = searchParams.get('table')
+    if (!tableParam) {
+      return
+    }
+
+    const normalizedTable = String(tableParam).trim()
+    if (normalizedTable && normalizedTable !== String(orderContextValue.tableNumber || '').trim()) {
+      orderContextValue.updateTableNumber(normalizedTable)
+    }
+  }, [contextUnavailable, orderContextValue, searchParams])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -263,7 +281,7 @@ function CartPage() {
                 </button>
 
                 <Link
-                  to="/checkout"
+                  to={checkoutRoute}
                   aria-disabled={!hasItems}
                   className={`rounded-lg px-4 py-2.5 text-center font-semibold text-white transition ${
                     hasItems

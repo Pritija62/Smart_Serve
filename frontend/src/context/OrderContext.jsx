@@ -3,6 +3,29 @@ import React, { createContext, useState, useEffect } from 'react'
 // Create the context
 export const OrderContext = createContext()
 
+const STORAGE_TABLE_KEY = 'tableNumber'
+const STORAGE_TABLE_CARTS_KEY = 'tableCarts'
+const LEGACY_CART_KEY = 'cart'
+
+const getStoredTableCarts = () => {
+  try {
+    const storedValue = localStorage.getItem(STORAGE_TABLE_CARTS_KEY)
+    if (!storedValue) {
+      return {}
+    }
+
+    const parsedValue = JSON.parse(storedValue)
+    return parsedValue && typeof parsedValue === 'object' ? parsedValue : {}
+  } catch (err) {
+    console.error('Error loading table carts:', err)
+    return {}
+  }
+}
+
+const saveStoredTableCarts = (tableCarts) => {
+  localStorage.setItem(STORAGE_TABLE_CARTS_KEY, JSON.stringify(tableCarts))
+}
+
 // Create the provider component
 export const OrderProvider = ({ children }) => {
   // State variables
@@ -13,31 +36,64 @@ export const OrderProvider = ({ children }) => {
 
   // Load cart from localStorage on mount
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart')
-    const savedTable = localStorage.getItem('tableNumber')
-
-    if (savedCart) {
-      try {
-        setCartItems(JSON.parse(savedCart))
-      } catch (err) {
-        console.error('Error loading cart:', err)
-      }
-    }
+    const savedTable = localStorage.getItem(STORAGE_TABLE_KEY)
+    const tableCarts = getStoredTableCarts()
+    const legacyCart = localStorage.getItem(LEGACY_CART_KEY)
 
     if (savedTable) {
       setTableNumber(savedTable)
+
+      if (Array.isArray(tableCarts[savedTable])) {
+        setCartItems(tableCarts[savedTable])
+        return
+      }
+    }
+
+    if (legacyCart) {
+      try {
+        const parsedLegacyCart = JSON.parse(legacyCart)
+        if (Array.isArray(parsedLegacyCart)) {
+          setCartItems(parsedLegacyCart)
+        }
+      } catch (err) {
+        console.error('Error loading legacy cart:', err)
+      }
     }
   }, [])
 
-  // Save cart to localStorage whenever it changes
+  // Load the selected table's cart whenever table changes.
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems))
-  }, [cartItems])
+    if (!tableNumber) {
+      return
+    }
+
+    const tableCarts = getStoredTableCarts()
+    setCartItems(Array.isArray(tableCarts[tableNumber]) ? tableCarts[tableNumber] : [])
+  }, [tableNumber])
+
+  // Save cart for the currently selected table whenever it changes.
+  useEffect(() => {
+    if (!tableNumber) {
+      localStorage.setItem(LEGACY_CART_KEY, JSON.stringify(cartItems))
+      return
+    }
+
+    const tableCarts = getStoredTableCarts()
+
+    if (cartItems.length > 0) {
+      tableCarts[tableNumber] = cartItems
+    } else {
+      delete tableCarts[tableNumber]
+    }
+
+    saveStoredTableCarts(tableCarts)
+    localStorage.removeItem(LEGACY_CART_KEY)
+  }, [cartItems, tableNumber])
 
   // Save table number to localStorage whenever it changes
   useEffect(() => {
     if (tableNumber) {
-      localStorage.setItem('tableNumber', tableNumber)
+      localStorage.setItem(STORAGE_TABLE_KEY, tableNumber)
     }
   }, [tableNumber])
 
@@ -107,7 +163,14 @@ export const OrderProvider = ({ children }) => {
   const clearCart = () => {
     console.log("clear cart")
     setCartItems([])
-    localStorage.removeItem('cart')
+
+    if (tableNumber) {
+      const tableCarts = getStoredTableCarts()
+      delete tableCarts[tableNumber]
+      saveStoredTableCarts(tableCarts)
+    } else {
+      localStorage.removeItem(LEGACY_CART_KEY)
+    }
   }
 
   // Update table number
@@ -117,9 +180,9 @@ export const OrderProvider = ({ children }) => {
     setTableNumber(normalizedNumber)
 
     if (normalizedNumber) {
-      localStorage.setItem('tableNumber', normalizedNumber)
+      localStorage.setItem(STORAGE_TABLE_KEY, normalizedNumber)
     } else {
-      localStorage.removeItem('tableNumber')
+      localStorage.removeItem(STORAGE_TABLE_KEY)
     }
   }
 

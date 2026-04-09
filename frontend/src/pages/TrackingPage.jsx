@@ -32,7 +32,7 @@ function TrackingPage() {
   const { socket = null, isConnected = false } = socketContext
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const tableNumber = localStorage.getItem('tableNumber')
+  const tableNumber = searchParams.get('table') || localStorage.getItem('tableNumber')
   const menuRoute = buildMenuRoute(tableNumber)
 
   // ===== EFFECTS =====
