@@ -1,11 +1,19 @@
 import React, { useContext, useState } from 'react'
 import { AuthContext } from '../context/AuthContext'
+import { OrderContext } from '../context/orderContext'
 import { Menu, X, Home, UtensilsCrossed, ShoppingCart, Truck, BarChart3, ListTodo } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { buildMenuRoute, buildTableRoute } from '../utils/menuRoute'
 
 function Navbar() {
   const { isLoggedIn, user } = useContext(AuthContext)
+  const orderContextValue = useContext(OrderContext)
+  const cartQuantity = orderContextValue?.totalQuantity || 0
+  const activeTableNumber = orderContextValue?.tableNumber || localStorage.getItem('tableNumber')
+  const menuRoute = buildMenuRoute(activeTableNumber)
+  const cartRoute = buildTableRoute('/cart', activeTableNumber)
+  const trackRoute = buildTableRoute('/track', activeTableNumber)
   const location = useLocation()
   const [isOpen, setIsOpen] = useState(false)
 
@@ -14,10 +22,9 @@ function Navbar() {
     if (!isLoggedIn) {
       // Customer links (not logged in)
       return [
-        { name: 'Home', href: '/', icon: Home },
-        { name: 'Menu', href: '/menu', icon: UtensilsCrossed },
-        { name: 'Cart', href: '/cart', icon: ShoppingCart },
-        { name: 'Track Order', href: '/track', icon: Truck },
+        { name: 'Menu', href: menuRoute, icon: UtensilsCrossed },
+        { name: 'Cart', href: cartRoute, icon: ShoppingCart },
+        { name: 'Track Order', href: trackRoute, icon: Truck },
       ]
     }
 
@@ -31,7 +38,8 @@ function Navbar() {
     if (user?.role === 'admin') {
       // Admin links
       return [
-        { name: 'Analytics', href: '/admin', icon: BarChart3 },
+        { name: 'Dashboard', href: '/admin', icon: BarChart3 },
+        { name: 'Analytics', href: '/analytics', icon: BarChart3 },
         { name: 'All Orders', href: '/admin/orders', icon: ListTodo },
       ]
     }
@@ -40,7 +48,7 @@ function Navbar() {
   }
 
   const navLinks = getNavLinks()
-  const isActive = (href) => location.pathname === href
+  const isActive = (href) => location.pathname === href.split('?')[0]
 
   return (
     <>
@@ -62,6 +70,11 @@ function Navbar() {
                 >
                   <Icon size={20} />
                   {link.name}
+                  {link.href.startsWith('/cart') && cartQuantity > 0 && (
+                    <span className="min-w-5 rounded-full bg-[#008080] px-1.5 py-0.5 text-center text-xs text-white">
+                      {cartQuantity}
+                    </span>
+                  )}
                 </Link>
               )
             })}
@@ -104,6 +117,11 @@ function Navbar() {
                 >
                   <Icon size={20} />
                   {link.name}
+                  {link.href.startsWith('/cart') && cartQuantity > 0 && (
+                    <span className="ml-auto min-w-5 rounded-full bg-[#008080] px-1.5 py-0.5 text-center text-xs text-white">
+                      {cartQuantity}
+                    </span>
+                  )}
                 </Link>
               )
             })}

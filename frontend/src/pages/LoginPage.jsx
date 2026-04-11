@@ -99,9 +99,8 @@ function LoginPage() {
               onChange={handleRoleChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF8C00] bg-white"
             >
-              <option value="kitchen">👨‍🍳 Kitchen Staff</option>
-              <option value="admin">👨‍💼 Admin</option>
-              <option value="customer">👤 Customer</option>
+              <option value="kitchen">Kitchen Staff</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
 

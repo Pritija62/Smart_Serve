@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_cors import cross_origin
-from app import db
-from app.models import Order, OrderItem, MenuItem
+from app import db, socketio
+from app.models import Order, OrderItem, MenuItem, DiningTable
 from datetime import datetime
 import uuid
 
@@ -20,11 +20,19 @@ def create_order():
     
     if not data['items']:
         return jsonify({'error': 'Order must have at least one item'}), 400
+
+    table_number = str(data['table_number']).strip()
+    if not table_number.isdigit():
+        return jsonify({'error': 'Invalid table number'}), 400
+
+    table = DiningTable.query.filter_by(number=int(table_number), is_active=True).first()
+    if not table:
+        return jsonify({'error': f'Table {table_number} does not exist'}), 400
     
     try:
         # Create order
         order = Order(
-            table_number=data['table_number'],
+            table_number=table_number,
             tracking_token=uuid.uuid4().hex
         )
         
@@ -53,9 +61,14 @@ def create_order():
         
         db.session.add(order)
         db.session.commit()
+        order_payload = order.to_dict()
+        order_payload['orderId'] = order.id
+        socketio.emit('new_order', order_payload, room='role_kitchen')
+        socketio.emit('new_order', order_payload, room='role_admin')
         
         return jsonify({
             'order_id': order.id,
+            'table_number': order.table_number,
             'total_price': order.total_price,
             'estimated_wait_time': order.estimated_wait_time,
             'tracking_token': order.tracking_token

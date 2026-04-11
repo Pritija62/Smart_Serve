@@ -1,39 +1,86 @@
 from app import db
 from app.models import MenuItem, OrderItem, Order
-from sqlalchemy import func
 from datetime import datetime, timedelta
+from math import exp
+from sqlalchemy import func
 
 
 class RecommendationEngine:
     """Service for generating recommendations"""
     
     @staticmethod
-    def get_popular_items(days=7, limit=5):
-        """Get top popular items from last N days"""
+    def get_popular_items(days=30, limit=5, decay_lambda=0.12):
+        """Get popular menu items using weighted frequency with recency decay."""
         days_ago = datetime.utcnow() - timedelta(days=days)
-        
-        results = db.session.query(
+
+        order_rows = db.session.query(
             MenuItem,
-            func.count(OrderItem.id).label('order_count')
-        ).join(OrderItem).join(Order).filter(
-            Order.created_at >= days_ago
-        ).group_by(MenuItem.id).order_by(
-            func.count(OrderItem.id).desc()
-        ).limit(limit).all()
-        
-        if not results:
-            return []
-        
-        total_count = sum([result[1] for result in results])
-        
-        items = [{
-            'id': result[0].id,
-            'name': result[0].name,
-            'price': result[0].price,
-            'confidence': (result[1] / total_count * 100) if total_count > 0 else 0
-        } for result in results]
-        
-        return items
+            OrderItem.quantity,
+            Order.created_at,
+        ).join(OrderItem, OrderItem.menu_item_id == MenuItem.id).join(
+            Order, OrderItem.order_id == Order.id
+        ).filter(
+            Order.created_at >= days_ago,
+            MenuItem.is_available.is_(True),
+        ).all()
+
+        if not order_rows:
+            fallback_items = MenuItem.query.filter_by(is_available=True).order_by(
+                MenuItem.created_at.desc()
+            ).limit(limit).all()
+
+            return [
+                {
+                    **item.to_dict(),
+                    'order_count': 0,
+                    'total_quantity': 0,
+                    'popularity_score': 0,
+                    'confidence': 0,
+                }
+                for item in fallback_items
+            ]
+
+        scores = {}
+        quantities = {}
+        counts = {}
+
+        now = datetime.utcnow()
+
+        for menu_item, quantity, created_at in order_rows:
+            age_days = max((now - created_at).total_seconds() / 86400.0, 0)
+            recency_weight = exp(-decay_lambda * age_days)
+            weighted_score = float(quantity or 1) * recency_weight
+
+            if menu_item.id not in scores:
+                scores[menu_item.id] = {
+                    'menu_item': menu_item,
+                    'popularity_score': 0.0,
+                }
+                quantities[menu_item.id] = 0
+                counts[menu_item.id] = 0
+
+            scores[menu_item.id]['popularity_score'] += weighted_score
+            quantities[menu_item.id] += int(quantity or 1)
+            counts[menu_item.id] += 1
+
+        ranked_items = sorted(
+            scores.values(),
+            key=lambda row: row['popularity_score'],
+            reverse=True,
+        )[:limit]
+
+        max_score = ranked_items[0]['popularity_score'] if ranked_items else 0
+
+        return [
+            {
+                **row['menu_item'].to_dict(),
+                'order_count': counts[row['menu_item'].id],
+                'total_quantity': quantities[row['menu_item'].id],
+                'popularity_score': round(row['popularity_score'], 4),
+                'confidence': round((row['popularity_score'] / max_score) * 100, 2) if max_score > 0 else 0,
+            }
+            for row in ranked_items
+        ]
     
     @staticmethod
     def get_trending_items(hours=24, limit=5):

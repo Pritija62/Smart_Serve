@@ -1,62 +1,39 @@
 import { createContext, useState, useEffect } from 'react'
-import { loginKitchen, loginAdmin, getCurrentUser } from '../services/api'
+import { loginKitchen, loginAdmin } from '../services/api'
 
-// Create the context
 export const AuthContext = createContext()
 
-// Create the provider component
 export const AuthProvider = ({ children }) => {
-  // State variables
   const [user, setUser] = useState(null)
-  const [token, setToken] = useState(localStorage.getItem('token') || null)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  // token is the source of truth for "logged in"
+  const [token, setToken] = useState(sessionStorage.getItem('token') || null)
+  const [isLoggedIn, setIsLoggedIn] = useState(!!sessionStorage.getItem('token'))
+
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  // Check if user is logged in on component mount
+  // ✅ MVP auth check: don't call /auth/me (backend may not have it)
   useEffect(() => {
-    const checkAuth = async () => {
-      const storedToken = localStorage.getItem('token')
-
-      console.log('checking auth on mount...')  
-      console.log('Token found:', !!storedToken)   
-      
-      if (storedToken) {
-        try {
-          setIsLoading(true)
-          setToken(storedToken)
-          
-          // Verify token is still valid by getting current user
-          const response = await getCurrentUser()
-          setUser(response.data.user)
-          setIsLoggedIn(true)
-          setError(null)
-        } catch (err) {
-          // Token is invalid/expired
-          localStorage.removeItem('token')
-          setToken(null)
-          setUser(null)
-          setIsLoggedIn(false)
-          setError('Session expired. Please login again.')
-        } finally {
-          setIsLoading(false)
-        }
-      }
+    const storedToken = sessionStorage.getItem('token')
+    if (storedToken) {
+      setToken(storedToken)
+      setIsLoggedIn(true)
+      // user will be set after a successful login.
+      // For refreshes, user may be null; that's OK for MVP.
+    } else {
+      setToken(null)
+      setUser(null)
+      setIsLoggedIn(false)
     }
-
-    checkAuth()
   }, [])
 
-  // Login function
   const login = async (email, password, role) => {
-    console.log("login attempt:",{ email, role })
     try {
       setIsLoading(true)
       setError(null)
 
       let response
-
-      // Choose login endpoint based on role
       if (role === 'kitchen') {
         response = await loginKitchen(email, password)
       } else if (role === 'admin') {
@@ -65,40 +42,45 @@ export const AuthProvider = ({ children }) => {
         throw new Error('Invalid role')
       }
 
-      // Save token to localStorage
       const newToken = response.data.token
-      localStorage.setItem('token', newToken)
+      sessionStorage.setItem('token', newToken)
       setToken(newToken)
-      console.log('login success')  
-      console.log('User:', response.data.user)  
-      console.log('Token saved to localStorage')  
-
-      // Save user info
-      setUser(response.data.user)
       setIsLoggedIn(true)
+
+      // Backend returns user in login response (your code expects this)
+      setUser(response.data.user || null)
 
       return response.data
     } catch (err) {
-      const errorMessage = err.response?.data?.error || err.response?.data?.message || 'Login failed'
+      const errorMessage =
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        'Login failed'
       setError(errorMessage)
+
+      // ensure consistent state on failed login
+      sessionStorage.removeItem('token')
+      setToken(null)
+      setUser(null)
       setIsLoggedIn(false)
+
       throw err
     } finally {
       setIsLoading(false)
     }
   }
 
-  // Logout function
   const logout = () => {
-    console.log("user logout")
-    localStorage.removeItem('token')
+    sessionStorage.removeItem('token')
     setToken(null)
     setUser(null)
     setIsLoggedIn(false)
     setError(null)
   }
 
-  // Value to provide to all components
+  // optional convenience helper (useful in KitchenDashboard)
+  const hasKitchenAccess = ['kitchen_staff', 'admin'].includes(user?.role)
+
   const value = {
     user,
     token,
@@ -106,12 +88,9 @@ export const AuthProvider = ({ children }) => {
     isLoading,
     error,
     login,
-    logout
+    logout,
+    hasKitchenAccess,
   }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
