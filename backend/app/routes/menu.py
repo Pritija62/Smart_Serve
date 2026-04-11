@@ -51,8 +51,9 @@ def get_item_recommendations(item_id):
 
     days = request.args.get('days', default=30, type=int)
     limit = request.args.get('limit', default=4, type=int)
-    min_support = request.args.get('min_support', default=0.1, type=float)
-    min_confidence = request.args.get('min_confidence', default=0.3, type=float)
+    # Keep customer defaults aligned with admin analysis defaults that produced rules.
+    min_support = request.args.get('min_support', default=0.02, type=float)
+    min_confidence = request.args.get('min_confidence', default=0.5, type=float)
 
     days = max(1, min(days, 365))
     limit = max(1, min(limit, 10))

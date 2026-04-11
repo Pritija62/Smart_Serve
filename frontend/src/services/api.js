@@ -60,7 +60,7 @@ export const getMenuItemById = (id) => {
 
 export const getMenuItemRecommendations = (
   itemId,
-  { days = 30, limit = 4, min_support = 0.1, min_confidence = 0.3 } = {}
+  { days = 30, limit = 4, min_support = 0.02, min_confidence = 0.5 } = {}
 ) => {
   return api.get(`/menu/${itemId}/recommendations`, {
     params: { days, limit, min_support, min_confidence },

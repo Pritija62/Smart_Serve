@@ -197,7 +197,7 @@ function ItemDetailPage() {
                       <p className="whitespace-nowrap text-sm font-bold text-[#FF8C00]">Rs {recommendedItem.price}</p>
                     </div>
                     <p className="mt-2 text-xs font-semibold text-[#008080]">
-                      {(Number(recommendedItem.confidence || 0) * 100).toFixed(0)}% customers also order this
+                      {(Number(recommendedItem.confidence || 0) * 100).toFixed(0)}% of customers who order {item.name} also order this
                     </p>
                   </Link>
                 ))}
