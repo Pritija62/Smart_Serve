@@ -1,12 +1,10 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { UtensilsCrossed } from 'lucide-react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { OrderProvider } from './context/orderContext'
 import { SocketProvider } from './context/SocketContext'
 import Layout from './components/Layout'
 import CustomerTableGuard from './components/CustomerTableGuard'
-import { buildMenuRoute } from './utils/menuRoute'
 
 // Import pages
 import MenuPage from './pages/MenuPage'
@@ -20,10 +18,6 @@ import AnalyticsPage from './pages/AnalyticsPage'
 import OrderHistoryPage from './pages/OrderHistoryPage'
 
 function App() {
-  const savedTableNumber = localStorage.getItem('tableNumber')
-  const menuRoute = buildMenuRoute(savedTableNumber)
-  const isTableRequired = new URLSearchParams(window.location.search).get('tableRequired') === '1'
-
   return (
     <Router>
       <AuthProvider>
@@ -31,43 +25,29 @@ function App() {
           <SocketProvider>
             <Layout>
               <Routes>
-              {/* Home */}
+              {/* Customer Entry */}
+              <Route path="/" element={<Navigate to="/menu" replace />} />
+
+              {/* Table Required Fallback */}
               <Route
-                path="/"
+                path="/table-required"
                 element={
-                  <div className="text-center py-20">
-                    <h1 className="mb-4 flex items-center justify-center gap-2 text-4xl font-bold text-[#FF8C00]">
-                      <UtensilsCrossed size={34} />
-                      Welcome to Our Restaurant!
-                    </h1>
-                    <p className="text-gray-600 text-lg mb-8">
-                      Choose an option from the menu above to get started.
+                  <div className="mx-auto max-w-xl py-20 text-center">
+                    <p className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                      Table session is missing. Please scan your table QR code to continue ordering.
                     </p>
-                    {isTableRequired && (
-                      <p className="mx-auto mb-6 max-w-xl rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-                        Table session is missing. Please scan your table QR code to continue ordering.
-                      </p>
-                    )}
-                    <div className="space-y-4">
-                      <a
-                        href={menuRoute}
-                        className="inline-block bg-[#FF8C00] hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-lg transition"
-                      >
-                        Browse Menu
-                      </a>
-                      <a
-                        href="/login"
-                        className="inline-block bg-[#008080] hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg transition ml-4"
-                      >
-                        Staff Login
-                      </a>
-                    </div>
+                    <a
+                      href="/login"
+                      className="inline-block bg-[#008080] hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg transition"
+                    >
+                      Staff Login
+                    </a>
                   </div>
                 }
               />
 
               {/* Customer Pages */}
-              <Route path="/menu" element={<CustomerTableGuard><MenuPage /></CustomerTableGuard>} />
+              <Route path="/menu" element={<MenuPage />} />
               <Route path="/cart" element={<CustomerTableGuard><CartPage /></CustomerTableGuard>} />
               <Route path="/checkout" element={<CustomerTableGuard><CheckoutPage /></CustomerTableGuard>} />
               <Route path="/track" element={<CustomerTableGuard><TrackingPage /></CustomerTableGuard>} />

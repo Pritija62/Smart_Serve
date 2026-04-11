@@ -22,7 +22,6 @@ function Navbar() {
     if (!isLoggedIn) {
       // Customer links (not logged in)
       return [
-        { name: 'Home', href: '/', icon: Home },
         { name: 'Menu', href: menuRoute, icon: UtensilsCrossed },
         { name: 'Cart', href: cartRoute, icon: ShoppingCart },
         { name: 'Track Order', href: trackRoute, icon: Truck },

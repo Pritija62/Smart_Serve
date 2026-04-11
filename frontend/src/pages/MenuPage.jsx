@@ -61,6 +61,10 @@ function MenuPage() {
     const tableParam = searchParams.get('table')
 
     if (!tableParam) {
+      if (tableNumber) {
+        updateTableNumber('')
+      }
+      setError(null)
       return
     }
 
@@ -81,9 +85,10 @@ function MenuPage() {
     }
 
     if (normalizedTable) {
+      setError(null)
       updateTableNumber(normalizedTable)
     }
-  }, [searchParams, updateTableNumber, validTableNumbers])
+  }, [searchParams, updateTableNumber, validTableNumbers, tableNumber])
 
   // Handle quantity changes
   const handleQuantityChange = (itemId, change) => {

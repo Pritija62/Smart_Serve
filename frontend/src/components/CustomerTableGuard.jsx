@@ -28,7 +28,7 @@ function CustomerTableGuard({ children }) {
   }, [resolvedTable, tableFromContext, orderContextValue])
 
   if (!resolvedTable) {
-    return <Navigate to="/?tableRequired=1" replace />
+    return <Navigate to="/table-required" replace />
   }
 
   if (!isValidTableNumber(tableFromQuery) || tableFromQuery !== resolvedTable) {
