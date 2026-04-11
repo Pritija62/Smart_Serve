@@ -13,6 +13,7 @@ import {
 import { AuthContext } from '../context/AuthContext'
 import { SocketContext } from '../context/SocketContext'
 import LoadingSpinner from '../components/LoadingSpinner'
+import AdminMarketBasketAnalysis from '../components/AdminMarketBasketAnalysis'
 import { getAdminStats, getAllOrders, getTopItems } from '../services/api'
 import { formatTimeInAppZone } from '../utils/time'
 
@@ -378,6 +379,8 @@ function AdminDashboard() {
             </Link>
           </div>
 
+        {/* Market Basket Analysis */}
+        <AdminMarketBasketAnalysis />
           <div className="space-y-3">
             {recentOrders.slice(0, 3).map((order) => (
               <div

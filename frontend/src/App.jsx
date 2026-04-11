@@ -10,6 +10,7 @@ import { buildMenuRoute } from './utils/menuRoute'
 
 // Import pages
 import MenuPage from './pages/MenuPage'
+import ItemDetailPage from './pages/ItemDetailPage'
 import LoginPage from './pages/LoginPage'
 import KitchenDashboard from './pages/KitchenDashboard'
 import CartPage from './pages/CartPage'
@@ -68,6 +69,7 @@ function App() {
 
               {/* Customer Pages */}
               <Route path="/menu" element={<CustomerTableGuard><MenuPage /></CustomerTableGuard>} />
+              <Route path="/menu/item/:id" element={<CustomerTableGuard><ItemDetailPage /></CustomerTableGuard>} />
               <Route path="/cart" element={<CustomerTableGuard><CartPage /></CustomerTableGuard>} />
               <Route path="/checkout" element={<CustomerTableGuard><CheckoutPage /></CustomerTableGuard>} />
               <Route path="/track" element={<CustomerTableGuard><TrackingPage /></CustomerTableGuard>} />

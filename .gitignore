@@ -37,3 +37,9 @@ dist/
 # Testing
 .pytest_cache/
 coverage/
+backend/tests/test_apriori.py
+backend/tests/__init__.py
+backend/tests/TEST_SUMMARY.md
+backend/app/utils/timezone.py
+backend/TIMEZONE_GUIDE.md
+backend/run_tests.py

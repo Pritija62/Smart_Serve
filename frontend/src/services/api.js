@@ -58,6 +58,15 @@ export const getMenuItemById = (id) => {
   return api.get(`/menu/${id}`)
 }
 
+export const getMenuItemRecommendations = (
+  itemId,
+  { days = 30, limit = 4, min_support = 0.1, min_confidence = 0.3 } = {}
+) => {
+  return api.get(`/menu/${itemId}/recommendations`, {
+    params: { days, limit, min_support, min_confidence },
+  })
+}
+
 export const getRecommendations = () => {
   return api.get('/menu/recommendations')
 }
@@ -110,3 +119,18 @@ export const getTopItems = () => {
 
 // Export the api instance for any custom calls
 export default api
+
+// analysis endpoints
+export const getMarketBasketAnalysis = ({ days = 30, min_support = 0.3, min_confidence = 0.7 } = {}) => {
+  return api.get('/admin/analysis/market-basket', {
+    params: { days, min_support, min_confidence },
+  })
+}
+export const predictItems = (items, { days = 30, min_support = 0.3, min_confidence = 0.7 } = {}) => {
+  return api.post('/admin/analysis/predict-items', {
+    items,
+    days,
+    min_support,
+    min_confidence,
+  })
+}
