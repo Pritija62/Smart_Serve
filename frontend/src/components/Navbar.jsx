@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react'
 import { AuthContext } from '../context/AuthContext'
 import { OrderContext } from '../context/orderContext'
-import { Menu, X, Home, UtensilsCrossed, ShoppingCart, Truck, BarChart3, ListTodo } from 'lucide-react'
+import { Menu, X, UtensilsCrossed, ShoppingCart, Truck, BarChart3, ListTodo } from 'lucide-react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { buildMenuRoute, buildTableRoute } from '../utils/menuRoute'
@@ -19,23 +19,27 @@ function Navbar() {
 
   // Determine which links to show based on role
   const getNavLinks = () => {
+    const customerLinks = [
+      { name: 'Menu', href: menuRoute, icon: UtensilsCrossed },
+      { name: 'Cart', href: cartRoute, icon: ShoppingCart },
+      { name: 'Track Order', href: trackRoute, icon: Truck },
+    ]
+
     if (!isLoggedIn) {
       // Customer links (not logged in)
-      return [
-        { name: 'Menu', href: menuRoute, icon: UtensilsCrossed },
-        { name: 'Cart', href: cartRoute, icon: ShoppingCart },
-        { name: 'Track Order', href: trackRoute, icon: Truck },
-      ]
+      return customerLinks
     }
 
-    if (user?.role === 'kitchen') {
+    const role = String(user?.role || '').toLowerCase()
+
+    if (role === 'kitchen' || role === 'kitchen_staff') {
       // Kitchen staff links
       return [
         { name: 'Dashboard', href: '/kitchen', icon: ListTodo },
       ]
     }
 
-    if (user?.role === 'admin') {
+    if (role === 'admin') {
       // Admin links
       return [
         { name: 'Dashboard', href: '/admin', icon: BarChart3 },
@@ -44,7 +48,8 @@ function Navbar() {
       ]
     }
 
-    return []
+    // Fallback keeps customer navigation visible when token exists but role isn't restored yet.
+    return customerLinks
   }
 
   const navLinks = getNavLinks()
