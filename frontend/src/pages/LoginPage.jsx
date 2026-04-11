@@ -101,7 +101,6 @@ function LoginPage() {
             >
               <option value="kitchen">Kitchen Staff</option>
               <option value="admin">Admin</option>
-              <option value="customer">Customer</option>
             </select>
           </div>
 

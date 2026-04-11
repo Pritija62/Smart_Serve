@@ -11,8 +11,11 @@ import {
   TrendingUp,
 } from 'lucide-react'
 import { AuthContext } from '../context/AuthContext'
+import { SocketContext } from '../context/SocketContext'
 import LoadingSpinner from '../components/LoadingSpinner'
+import AdminMarketBasketAnalysis from '../components/AdminMarketBasketAnalysis'
 import { getAdminStats, getAllOrders, getTopItems } from '../services/api'
+import { formatTimeInAppZone } from '../utils/time'
 
 const MOCK_STATS = {
   totalSales: 22500,
@@ -53,18 +56,14 @@ const MOCK_RECENT_ORDERS = [
 ]
 
 const formatTime = (isoTime) => {
-  if (!isoTime) return 'N/A'
-  const parsed = new Date(isoTime)
-  if (Number.isNaN(parsed.getTime())) return 'N/A'
-  return parsed.toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatTimeInAppZone(isoTime)
 }
 
 function AdminDashboard() {
   const navigate = useNavigate()
   const { user, logout } = useContext(AuthContext)
+  const socketContext = useContext(SocketContext) || {}
+  const { socket = null, isConnected = false } = socketContext
   const [stats, setStats] = useState(MOCK_STATS)
   const [recentOrders, setRecentOrders] = useState(MOCK_RECENT_ORDERS)
   const [isLoading, setIsLoading] = useState(true)
@@ -173,9 +172,31 @@ function AdminDashboard() {
   }, [fetchDashboardData])
 
   useEffect(() => {
+    if (!socket || !isConnected) {
+      return undefined
+    }
+
+    socket.emit('join_role_room', { role: 'admin' })
+
+    const handleRealtimeRefresh = () => {
+      fetchDashboardData()
+    }
+
+    socket.on('new_order', handleRealtimeRefresh)
+    socket.on('order_status_updated', handleRealtimeRefresh)
+
+    return () => {
+      socket.emit('leave_role_room', { role: 'admin' })
+      socket.off('new_order', handleRealtimeRefresh)
+      socket.off('order_status_updated', handleRealtimeRefresh)
+    }
+  }, [socket, isConnected, fetchDashboardData])
+
+  // Fallback sync to avoid stale stats even if socket disconnects.
+  useEffect(() => {
     const intervalId = setInterval(() => {
       fetchDashboardData()
-    }, 30000)
+    }, 120000)
 
     return () => clearInterval(intervalId)
   }, [fetchDashboardData])
@@ -358,6 +379,8 @@ function AdminDashboard() {
             </Link>
           </div>
 
+        {/* Market Basket Analysis */}
+        <AdminMarketBasketAnalysis />
           <div className="space-y-3">
             {recentOrders.slice(0, 3).map((order) => (
               <div

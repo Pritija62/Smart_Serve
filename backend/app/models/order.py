@@ -4,7 +4,17 @@ import uuid
 
 
 class Order(db.Model):
-    """Order model for customer orders"""
+    """Order model for customer orders
+    
+    TIMEZONE HANDLING:
+    - created_at and completed_at are stored in UTC (using datetime.utcnow)
+    - All timestamps are stored as naive datetimes (no timezone info)
+    - API responses return ISO format strings without timezone suffix
+    - Frontend adds 'Z' to mark UTC and converts to display timezone (Asia/Kathmandu)
+    - This ensures consistency across all timezones globally
+    
+    For more details, see TIMEZONE_GUIDE.md
+    """
     __tablename__ = 'orders'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -14,8 +24,8 @@ class Order(db.Model):
     total_price = db.Column(db.Float, default=0)
     estimated_wait_time = db.Column(db.Integer, default=0)  # seconds
     tracking_token = db.Column(db.String(50), unique=True)  # For public tracking
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    completed_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Always UTC
+    completed_at = db.Column(db.DateTime, nullable=True)  # Always UTC when set
     
     # Relationships
     order_items = db.relationship('OrderItem', backref='order', lazy=True, cascade='all, delete-orphan')

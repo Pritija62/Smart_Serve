@@ -1,9 +1,10 @@
 import React, { useContext, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ShoppingCart, Plus, Minus, Trash2 } from 'lucide-react'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { OrderContext } from '../context/orderContext'
+import { buildMenuRoute, buildTableRoute } from '../utils/menuRoute'
 
 const MOCK_CART_ITEMS = [
   { id: 1, name: 'Burger', quantity: 2, price: 150 },
@@ -15,6 +16,7 @@ const MOCK_TABLE_NUMBER = 5
 
 function CartPage() {
   const orderContextValue = useContext(OrderContext)
+  const [searchParams] = useSearchParams()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -23,6 +25,24 @@ function CartPage() {
   const tableNumber = contextUnavailable
     ? MOCK_TABLE_NUMBER
     : orderContextValue.tableNumber || MOCK_TABLE_NUMBER
+  const menuRoute = buildMenuRoute(tableNumber)
+  const checkoutRoute = buildTableRoute('/checkout', tableNumber)
+
+  useEffect(() => {
+    if (contextUnavailable) {
+      return
+    }
+
+    const tableParam = searchParams.get('table')
+    if (!tableParam) {
+      return
+    }
+
+    const normalizedTable = String(tableParam).trim()
+    if (normalizedTable && normalizedTable !== String(orderContextValue.tableNumber || '').trim()) {
+      orderContextValue.updateTableNumber(normalizedTable)
+    }
+  }, [contextUnavailable, orderContextValue, searchParams])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -139,7 +159,7 @@ function CartPage() {
             <h2 className="mb-2 text-xl font-bold text-gray-700">Empty Cart</h2>
             <p className="mb-5 text-gray-500">Add delicious items from the menu to get started.</p>
             <Link
-              to="/menu"
+              to={menuRoute}
               className="inline-flex items-center justify-center rounded-lg bg-[#FF8C00] px-5 py-2.5 font-semibold text-white transition hover:bg-orange-600"
             >
               Continue Shopping
@@ -246,7 +266,7 @@ function CartPage() {
 
               <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
                 <Link
-                  to="/menu"
+                  to={menuRoute}
                   className="rounded-lg bg-[#008080] px-4 py-2.5 text-center font-semibold text-white transition hover:bg-teal-700"
                 >
                   Continue Shopping
@@ -261,7 +281,7 @@ function CartPage() {
                 </button>
 
                 <Link
-                  to="/checkout"
+                  to={checkoutRoute}
                   aria-disabled={!hasItems}
                   className={`rounded-lg px-4 py-2.5 text-center font-semibold text-white transition ${
                     hasItems

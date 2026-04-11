@@ -7,15 +7,15 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
 
   // token is the source of truth for "logged in"
-  const [token, setToken] = useState(localStorage.getItem('token') || null)
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'))
+  const [token, setToken] = useState(sessionStorage.getItem('token') || null)
+  const [isLoggedIn, setIsLoggedIn] = useState(!!sessionStorage.getItem('token'))
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
 
   // ✅ MVP auth check: don't call /auth/me (backend may not have it)
   useEffect(() => {
-    const storedToken = localStorage.getItem('token')
+    const storedToken = sessionStorage.getItem('token')
     if (storedToken) {
       setToken(storedToken)
       setIsLoggedIn(true)
@@ -43,7 +43,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       const newToken = response.data.token
-      localStorage.setItem('token', newToken)
+      sessionStorage.setItem('token', newToken)
       setToken(newToken)
       setIsLoggedIn(true)
 
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
       setError(errorMessage)
 
       // ensure consistent state on failed login
-      localStorage.removeItem('token')
+      sessionStorage.removeItem('token')
       setToken(null)
       setUser(null)
       setIsLoggedIn(false)
@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = () => {
-    localStorage.removeItem('token')
+    sessionStorage.removeItem('token')
     setToken(null)
     setUser(null)
     setIsLoggedIn(false)

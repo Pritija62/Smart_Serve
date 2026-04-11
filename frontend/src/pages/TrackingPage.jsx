@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useContext } from 'react'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useLocation, useSearchParams, useNavigate } from 'react-router-dom'
 import { SocketContext } from '../context/SocketContext'
 import { trackOrder } from '../services/api'
+import { buildMenuRoute } from '../utils/menuRoute'
+import { getTrackedOrdersForTable, upsertTrackedOrder } from '../utils/orderTracking'
+import { formatTimeInAppZone } from '../utils/time'
 import { 
   Clock, 
   CheckCircle, 
-  AlertCircle, 
   RefreshCw,
   MapPin,
   Package,
   ChefHat,
-  Info,
   Wifi,
   WifiOff,
 } from 'lucide-react'
@@ -30,22 +31,30 @@ function TrackingPage() {
   const socketContext = useContext(SocketContext) || {}
   const { socket = null, isConnected = false } = socketContext
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
+  const tableNumber = searchParams.get('table') || localStorage.getItem('tableNumber')
+  const menuRoute = buildMenuRoute(tableNumber)
+  const [trackedOrders, setTrackedOrders] = useState([])
 
   // ===== EFFECTS =====
 
   // Effect 1: Check if orderId passed via URL params
   useEffect(() => {
-    const idFromUrl = searchParams.get('orderId')
+    const idFromUrl = searchParams.get('orderId') || location.state?.orderId
     if (idFromUrl) {
       setOrderId(idFromUrl)
-      fetchOrder(idFromUrl)
+      if (!tableNumber) {
+        fetchOrder(idFromUrl)
+      }
     }
-  }, [searchParams])
+  }, [searchParams, location.state, tableNumber])
 
   // Effect 2: Listen for real-time order updates via Socket.IO
   useEffect(() => {
   if (!socket || !orderId) return
+
+    socket.emit('join_order_room', { orderId: String(orderId) })
 
   const onOrderStatusUpdated = (payload) => {
     console.log('📨 Real-time update received:', payload)
@@ -58,10 +67,20 @@ function TrackingPage() {
 
     // If backend sends the full order, normalize it
     if (payload?.order_items || payload?.table_number || payload?.created_at) {
-      setOrder(normalizeOrder(payload))
+      const normalizedOrder = normalizeOrder(payload)
+      setOrder(normalizedOrder)
+      upsertTrackedOrder(normalizedOrder)
+      setTrackedOrders(getTrackedOrdersForTable(normalizedOrder.tableNumber || tableNumber))
     } else if (payloadStatus) {
       // Otherwise just patch status
-      setOrder((prev) => (prev ? { ...prev, status: String(payloadStatus).toUpperCase() } : prev))
+      setOrder((prev) => {
+        if (!prev) return prev
+
+        const updatedOrder = { ...prev, status: String(payloadStatus).toUpperCase() }
+        upsertTrackedOrder(updatedOrder)
+        setTrackedOrders(getTrackedOrdersForTable(updatedOrder.tableNumber || tableNumber))
+        return updatedOrder
+      })
     }
 
     setLastUpdated(new Date())
@@ -70,6 +89,7 @@ function TrackingPage() {
   socket.on('order_status_updated', onOrderStatusUpdated)
 
   return () => {
+    socket.emit('leave_order_room', { orderId: String(orderId) })
     socket.off('order_status_updated', onOrderStatusUpdated)
   }
 }, [socket, orderId])
@@ -115,7 +135,10 @@ function TrackingPage() {
 
       console.log('✅ Order fetched:', response.data)
 
-      setOrder(normalizeOrder(response.data))
+      const normalizedOrder = normalizeOrder(response.data)
+      setOrder(normalizedOrder)
+      upsertTrackedOrder(normalizedOrder)
+      setTrackedOrders(getTrackedOrdersForTable(normalizedOrder.tableNumber || tableNumber))
       setLastUpdated(new Date())
     } catch (err) {
       console.error('❌ Error fetching order:', err)
@@ -127,6 +150,32 @@ function TrackingPage() {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!tableNumber) {
+      setTrackedOrders([])
+      return
+    }
+
+    const tableOrders = getTrackedOrdersForTable(tableNumber)
+    setTrackedOrders(tableOrders)
+
+    const explicitOrderId = searchParams.get('orderId') || location.state?.orderId
+    const latestOrder = tableOrders[0]
+
+    if (explicitOrderId) {
+      if (String(explicitOrderId) !== String(orderId)) {
+        setOrderId(String(explicitOrderId))
+        fetchOrder(String(explicitOrderId))
+      }
+      return
+    }
+
+    if (latestOrder && String(latestOrder.orderId) !== String(orderId)) {
+      setOrderId(String(latestOrder.orderId))
+      fetchOrder(String(latestOrder.orderId))
+    }
+  }, [tableNumber, searchParams, location.state])
 
   // Handle search button click
   const handleSearch = (e) => {
@@ -188,91 +237,41 @@ function TrackingPage() {
     }
   }
 
-  // Format time
-  const formatTime = (dateString) => {
-    if (!dateString) return 'N/A'
-    const date = new Date(dateString)
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    })
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'PREPARING':
+        return 'ORDER STARTED'
+      default:
+        return status
+    }
   }
 
-  // ===== RENDER: SEARCH SECTION =====
-  if (!searched || !order) {
+  // Format time
+  const formatTime = (dateString) => {
+    return formatTimeInAppZone(dateString)
+  }
+
+  // ===== RENDER: NO ORDER SECTION =====
+  if (!order) {
     return (
       <div className="min-h-screen bg-[#F5F5F5] p-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-2xl mx-auto"
+          className="max-w-2xl mx-auto mt-12"
         >
-          {/* Header */}
-          <div className="text-center mb-12 mt-8">
-            <h1 className="mb-2 flex items-center justify-center gap-2 text-4xl font-bold text-[#FF8C00]">
-              <MapPin size={32} />
-              Track Your Order
-            </h1>
-            <p className="text-gray-600">
-              Enter your Order ID to see real-time status
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+            <h1 className="mb-3 text-3xl font-bold text-[#FF8C00]">No Order to Track</h1>
+            <p className="text-gray-600 mb-6">
+              Place an order first, then this page will show your live order status updates.
             </p>
-          </div>
-
-          {/* Search Card */}
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <form onSubmit={handleSearch} className="space-y-4">
-              {/* Order ID Input */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Order ID
-                </label>
-                <input
-                  type="text"
-                  value={orderId}
-                  onChange={(e) => setOrderId(e.target.value)}
-                  placeholder="Enter your Order ID (e.g., 123)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF8C00] focus:ring-2 focus:ring-[#FF8C00]/20"
-                />
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3"
-                >
-                  <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-red-700 text-sm">{error}</p>
-                </motion.div>
-              )}
-
-              {/* Search Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-[#FF8C00] hover:bg-orange-600 disabled:bg-gray-400 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <MapPin size={20} />
-                    Track Order
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* Example Info */}
-            <p className="mt-6 flex items-center justify-center gap-1 text-center text-sm text-gray-500">
-              <Info size={14} />
-              Example Order ID: 123 or 1001
-            </p>
+            {error && <p className="mb-6 text-sm text-red-600">{error}</p>}
+            <button
+              onClick={() => navigate(menuRoute)}
+              className="bg-[#008080] hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg transition"
+            >
+              Go to Menu
+            </button>
           </div>
         </motion.div>
       </div>
@@ -295,15 +294,74 @@ function TrackingPage() {
           </h1>
           <button
             onClick={() => {
+              const latestOrder = trackedOrders[0]
+
+              if (latestOrder) {
+                setOrderId(String(latestOrder.orderId))
+                fetchOrder(String(latestOrder.orderId))
+                return
+              }
+
               setOrder(null)
               setOrderId('')
+              setSearched(false)
               setError(null)
             }}
             className="bg-[#008080] hover:bg-teal-700 text-white px-4 py-2 rounded-lg"
           >
-            Track Another
+            Show Latest
           </button>
         </div>
+
+        {trackedOrders.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-lg shadow-lg p-5 mb-6"
+          >
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">
+                  Table {tableNumber} Orders
+                </h2>
+                <p className="text-sm text-gray-600">
+                  New orders are added here automatically.
+                </p>
+              </div>
+              <span className="rounded-full bg-[#008080]/10 px-3 py-1 text-sm font-semibold text-[#008080]">
+                {trackedOrders.length} tracked
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {trackedOrders.map((trackedOrder) => (
+                <button
+                  key={trackedOrder.orderId}
+                  type="button"
+                  onClick={() => {
+                    setOrderId(String(trackedOrder.orderId))
+                    fetchOrder(String(trackedOrder.orderId))
+                  }}
+                  className={`rounded-lg border px-4 py-3 text-left transition hover:border-[#FF8C00] hover:bg-orange-50 ${
+                    String(trackedOrder.orderId) === String(orderId)
+                      ? 'border-[#FF8C00] bg-orange-50'
+                      : 'border-gray-200 bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-gray-800">Order #{trackedOrder.orderId}</p>
+                    <span className="text-xs font-semibold text-gray-600">
+                      {getStatusLabel(trackedOrder.status)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Rs {Number(trackedOrder.totalPrice || 0).toFixed(2)}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Connection Status */}
         <div
@@ -374,7 +432,7 @@ function TrackingPage() {
                 {(order.status === 'READY' || order.status === 'COMPLETED') && (
                   <CheckCircle size={16} />
                 )}
-                {order.status}
+                {getStatusLabel(order.status)}
               </span>
             </div>
 
@@ -418,7 +476,7 @@ function TrackingPage() {
             </p>
             <div className="flex gap-4 justify-center">
               <button
-                onClick={() => navigate('/menu')}
+                onClick={() => navigate(menuRoute)}
                 className="bg-[#FF8C00] hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg"
               >
                 Order More
@@ -466,7 +524,7 @@ function TrackingPage() {
               </div>
             </motion.div>
 
-            {/* Item 2: Started Preparing (show if PREPARING or later) */}
+            {/* Item 2: Order Started (show if PREPARING or later) */}
             {['PREPARING', 'READY', 'COMPLETED'].includes(order.status) && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -480,7 +538,7 @@ function TrackingPage() {
                 </div>
                 <div className="pt-1">
                   <p className="font-semibold text-gray-800">
-                    Started Preparing
+                    Order Started
                   </p>
                   <p className="text-sm text-gray-600">
                     ~{formatTime(order.createdAt)} +3 mins
@@ -489,7 +547,7 @@ function TrackingPage() {
               </motion.div>
             )}
 
-            {/* Item 3: Almost Ready (show if READY or COMPLETED) */}
+            {/* Item 3: Ready for Pickup (show if READY or COMPLETED) */}
             {['READY', 'COMPLETED'].includes(order.status) && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
@@ -499,30 +557,9 @@ function TrackingPage() {
               >
                 <div className="flex flex-col items-center">
                   <CheckCircle size={24} className="text-green-600" />
-                  <div className="w-1 h-12 bg-green-300 mt-2"></div>
                 </div>
                 <div className="pt-1">
-                  <p className="font-semibold text-gray-800">Almost Ready</p>
-                  <p className="text-sm text-gray-600">
-                    ~{formatTime(order.createdAt)} +7 mins
-                  </p>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Item 4: Ready for Pickup (show if READY or COMPLETED) */}
-            {['READY', 'COMPLETED'].includes(order.status) && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-                className="flex gap-4"
-              >
-                <div className="flex flex-col items-center">
-                  <CheckCircle size={24} className="text-green-600" />
-                </div>
-                <div className="pt-1">
-                  <p className="font-semibold text-gray-800">Ready for Pickup</p>
+                  <p className="font-semibold text-gray-800">Order Ready</p>
                   <p className="text-sm text-gray-600">
                     ~{formatTime(order.createdAt)} +10 mins
                   </p>
@@ -606,7 +643,7 @@ function TrackingPage() {
           </p>
           {lastUpdated && (
             <p className="text-xs text-gray-500">
-              Last updated: {lastUpdated.toLocaleTimeString()}
+              Last updated: {formatTimeInAppZone(lastUpdated)}
             </p>
           )}
         </motion.div>

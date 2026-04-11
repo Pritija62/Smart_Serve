@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Create axios instance with base URL
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://192.168.100.34:5000/api',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -10,7 +10,7 @@ const api = axios.create({
 
 // Interceptor to add token to all requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
+      const token = sessionStorage.getItem('token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -23,7 +23,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       // Token expired or invalid
-      localStorage.removeItem('token')
+        sessionStorage.removeItem('token')
       window.location.href = '/login'
     }
     return Promise.reject(error)
@@ -31,10 +31,6 @@ api.interceptors.response.use(
 )
 
 // auth endpoints
-
-export const loginUser = (email, password) => {
-  return api.post('/auth/login', { email, password })
-}
 
 export const loginKitchen = (email, password) => {
   return api.post('/auth/kitchen-login', { email, password })
@@ -54,8 +50,21 @@ export const getMenu = () => {
   return api.get('/menu/')
 }
 
+export const getTables = () => {
+  return api.get('/tables/')
+}
+
 export const getMenuItemById = (id) => {
   return api.get(`/menu/${id}`)
+}
+
+export const getMenuItemRecommendations = (
+  itemId,
+  { days = 30, limit = 4, min_support = 0.02, min_confidence = 0.5 } = {}
+) => {
+  return api.get(`/menu/${itemId}/recommendations`, {
+    params: { days, limit, min_support, min_confidence },
+  })
 }
 
 export const getRecommendations = () => {
@@ -110,3 +119,18 @@ export const getTopItems = () => {
 
 // Export the api instance for any custom calls
 export default api
+
+// analysis endpoints
+export const getMarketBasketAnalysis = ({ days = 30, min_support = 0.3, min_confidence = 0.7 } = {}) => {
+  return api.get('/admin/analysis/market-basket', {
+    params: { days, min_support, min_confidence },
+  })
+}
+export const predictItems = (items, { days = 30, min_support = 0.3, min_confidence = 0.7 } = {}) => {
+  return api.post('/admin/analysis/predict-items', {
+    items,
+    days,
+    min_support,
+    min_confidence,
+  })
+}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react'
 import { AuthContext } from '../context/AuthContext'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { CheckCircle, Clock, Trash2, RefreshCw, ChefHat, PartyPopper } from 'lucide-react'
+import { CheckCircle, Clock, RefreshCw, ChefHat } from 'lucide-react'
 import { motion } from 'framer-motion'
 import api from '../services/api'
+import { formatTimeInAppZone } from '../utils/time'
 
 
 // ✅ add this (you must create socket client file as shown below)
@@ -25,6 +26,7 @@ function KitchenDashboard() {
   const mapOrder = (o) => ({
     id: o.id,
     tableNumber: o.table_number,
+    orderNumber: o.id,
     status: (o.status || '').toUpperCase(), // pending -> PENDING
     createdAt: o.created_at,
     items: (o.order_items || []).map((oi) => ({
@@ -63,6 +65,8 @@ function KitchenDashboard() {
 useEffect(() => {
   if (!isLoggedIn) return
 
+  socket.emit('join_role_room', { role: 'kitchen' })
+
   const onNewOrder = () => {
     fetchOrders()
   }
@@ -75,39 +79,31 @@ useEffect(() => {
   socket.on('order_status_updated', onOrderStatusUpdated)
 
   return () => {
+    socket.emit('leave_role_room', { role: 'kitchen' })
     socket.off('new_order', onNewOrder)
     socket.off('order_status_updated', onOrderStatusUpdated)
   }
 }, [isLoggedIn, fetchOrders])
 
-  // Mark order as ready
-  const handleMarkReady = async (orderId) => {
+  const handleStartOrder = async (orderId) => {
     try {
-      console.log('✅ Marking order as ready:', orderId)
-      await api.patch(`/kitchen/orders/${orderId}/status`, { status: 'ready' })
-      // No need to fetchOrders() because realtime will update,
-      // but keep it if you want:
-      // fetchOrders()
-      alert('Order marked as ready!')
+      console.log('▶️ Starting order:', orderId)
+      await api.patch(`/kitchen/orders/${orderId}/status`, { status: 'preparing' })
+      alert('Order started!')
     } catch (err) {
       console.error('❌ Error updating order:', err)
       alert('Failed to update order')
     }
   }
 
-  // Cancel order (MVP backend doesn’t support "cancelled")
-  const handleCancelOrder = async (orderId) => {
-    if (!window.confirm('Are you sure you want to cancel this order?')) return
-
+  // Mark order as ready
+  const handleMarkReady = async (orderId) => {
     try {
-      console.log('❌ Cancelling order:', orderId)
-
-      // ✅ MVP workaround: mark as completed (or remove cancel button)
-      await api.patch(`/kitchen/orders/${orderId}/status`, { status: 'completed' })
-
-      alert('Order completed!')
+      console.log('✅ Marking order as ready:', orderId)
+      await api.patch(`/kitchen/orders/${orderId}/status`, { status: 'ready' })
+      alert('Order marked as ready!')
     } catch (err) {
-      console.error('❌ Error cancelling/completing order:', err)
+      console.error('❌ Error updating order:', err)
       alert('Failed to update order')
     }
   }
@@ -137,8 +133,6 @@ useEffect(() => {
         return 'bg-yellow-100 text-yellow-800'
       case 'READY':
         return 'bg-green-100 text-green-800'
-      case 'COMPLETED':
-        return 'bg-gray-100 text-gray-800'
       default:
         return 'bg-gray-100 text-gray-800'
     }
@@ -153,6 +147,15 @@ useEffect(() => {
         return <CheckCircle size={20} className="text-green-600" />
       default:
         return <Clock size={20} />
+    }
+  }
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'PREPARING':
+        return 'STARTED'
+      default:
+        return status
     }
   }
 
@@ -180,12 +183,12 @@ useEffect(() => {
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-2xl font-bold text-[#FF8C00]">
-                  Table {order.tableNumber}
+                  Order #{order.orderNumber} · Table {order.tableNumber}
                 </h3>
                 <div className="flex items-center gap-2">
                   {getStatusIcon(order.status)}
                   <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(order.status)}`}>
-                    {order.status}
+                    {getStatusLabel(order.status)}
                   </span>
                 </div>
               </div>
@@ -203,11 +206,20 @@ useEffect(() => {
               </div>
 
               <p className="text-sm text-gray-500 mb-4">
-                Order time: {new Date(order.createdAt).toLocaleTimeString()}
+                Order time: {formatTimeInAppZone(order.createdAt)}
               </p>
 
               <div className="flex gap-2">
-                {order.status !== 'READY' && order.status !== 'COMPLETED' && (
+                {order.status === 'PENDING' && (
+                  <button
+                    onClick={() => handleStartOrder(order.id)}
+                    className="flex-1 bg-[#FF8C00] hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+                  >
+                    <ChefHat size={18} />
+                    Start
+                  </button>
+                )}
+                {order.status === 'PREPARING' && (
                   <button
                     onClick={() => handleMarkReady(order.id)}
                     className="flex-1 bg-[#008080] hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition"
@@ -216,13 +228,6 @@ useEffect(() => {
                     Ready
                   </button>
                 )}
-                <button
-                  onClick={() => handleCancelOrder(order.id)}
-                  className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition"
-                >
-                  <Trash2 size={18} />
-                  Complete
-                </button>
               </div>
             </motion.div>
           ))}

@@ -1,21 +1,44 @@
-import React, { useContext, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useContext, useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { CheckCircle, AlertCircle, ShoppingBag } from 'lucide-react'
 import { OrderContext } from '../context/orderContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { createOrder } from '../services/api'
+import { buildMenuRoute, buildTableRoute } from '../utils/menuRoute'
+import { upsertTrackedOrder } from '../utils/orderTracking'
 
 function CheckoutPage() {
   const orderContextValue = useContext(OrderContext)
+  const [searchParams] = useSearchParams()
   const [specialInstructions, setSpecialInstructions] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [confirmedOrder, setConfirmedOrder] = useState(null)
   const [orderedItems, setOrderedItems] = useState([])
 
+  const tableParam = searchParams.get('table')
+  const normalizedTableParam = String(tableParam || '').trim()
+
+  useEffect(() => {
+    if (
+      normalizedTableParam &&
+      orderContextValue?.updateTableNumber &&
+      normalizedTableParam !== String(orderContextValue?.tableNumber || '').trim()
+    ) {
+      orderContextValue.updateTableNumber(normalizedTableParam)
+    }
+  }, [normalizedTableParam, orderContextValue])
+
   const cartItems = orderContextValue?.cartItems || []
-  const tableNumber = orderContextValue?.tableNumber || localStorage.getItem('tableNumber') || '5'
+  const tableNumber =
+    orderContextValue?.tableNumber ||
+    normalizedTableParam ||
+    localStorage.getItem('tableNumber') ||
+    ''
+  const menuRoute = buildMenuRoute(tableNumber)
+  const cartRoute = buildTableRoute('/cart', tableNumber)
+  const trackRoute = buildTableRoute('/track', tableNumber)
   const hasItems = cartItems.length > 0
 
   const subtotal = useMemo(() => {
@@ -47,7 +70,7 @@ function CheckoutPage() {
 
       const tableNumberValue = String(tableNumber).trim()
       if (!tableNumberValue) {
-        throw new Error('Table number is required before placing order.')
+        throw new Error('Table number is required. Open the menu using your table QR code first.')
       }
 
       const orderItems = cartItems.map((item) => ({
@@ -64,11 +87,31 @@ function CheckoutPage() {
       const response = await createOrder(payload)
       const normalizedResponse = getNormalizedResponse(response.data)
 
+      upsertTrackedOrder(
+        {
+          ...normalizedResponse,
+          items: cartItems.map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+          })),
+        },
+        tableNumberValue
+      )
+
       setOrderedItems([...cartItems])
       setConfirmedOrder(normalizedResponse)
 
       // Keep checkout summary visible after confirmation.
       orderContextValue?.clearCart?.()
+
+      navigate(trackRoute, {
+        replace: true,
+        state: {
+          orderId: normalizedResponse.orderId,
+          tableNumber: tableNumberValue,
+        },
+      })
 
     } catch (err) {
       console.error('Checkout failed:', err)
@@ -138,13 +181,13 @@ function CheckoutPage() {
 
             <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Link
-                to={`/track?orderId=${confirmedOrder.orderId}`}
+                to={trackRoute}
                 className="rounded-lg bg-[#FF8C00] px-4 py-2.5 text-center font-semibold text-white transition hover:bg-orange-600"
               >
                 Track Order
               </Link>
               <Link
-                to="/menu"
+                to={menuRoute}
                 onClick={handleOrderMore}
                 className="rounded-lg bg-[#008080] px-4 py-2.5 text-center font-semibold text-white transition hover:bg-teal-700"
               >
@@ -171,7 +214,9 @@ function CheckoutPage() {
             Checkout
           </h1>
           <p className="text-gray-600">Review your order and confirm table details.</p>
-          <p className="mt-2 text-sm font-semibold text-gray-700">Table Number: {tableNumber}</p>
+          <p className="mt-2 text-sm font-semibold text-gray-700">
+            Table Number: {tableNumber || 'Not set'}
+          </p>
         </div>
 
         <AnimatePresence>
@@ -193,7 +238,7 @@ function CheckoutPage() {
             <h2 className="text-xl font-bold text-gray-700">Your cart is empty</h2>
             <p className="mt-2 text-gray-500">Add items before proceeding to checkout.</p>
             <Link
-              to="/menu"
+              to={menuRoute}
               className="mt-5 inline-flex rounded-lg bg-[#008080] px-5 py-2.5 font-semibold text-white transition hover:bg-teal-700"
             >
               Continue Shopping
@@ -265,7 +310,7 @@ function CheckoutPage() {
               </button>
 
               <Link
-                to="/cart"
+                to={cartRoute}
                 className="mt-3 inline-flex w-full justify-center rounded-lg bg-[#008080] px-4 py-2.5 font-semibold text-white transition hover:bg-teal-700"
               >
                 Cancel Order
