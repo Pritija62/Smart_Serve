@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_cors import cross_origin
 from app import db
 from app.models import MenuItem, OrderItem
-from sqlalchemy import func
+from app.services.recommendation_engine import RecommendationEngine
 
 menu_bp = Blueprint('menu', __name__, url_prefix='/api/menu')
 
@@ -30,14 +30,9 @@ def get_menu_item(item_id):
 @menu_bp.route('/recommendations', methods=['GET'])
 @cross_origin()
 def get_recommendations():
-    """Get top recommended items based on order frequency"""
-    # Get top 5 most ordered items
-    top_items = db.session.query(MenuItem).join(OrderItem).group_by(MenuItem.id).order_by(
-        func.count(OrderItem.id).desc()
-    ).limit(5).all()
-    
-    if not top_items:
-        # If no orders yet, return top 5 by creation date
-        top_items = MenuItem.query.filter_by(is_available=True).order_by(MenuItem.created_at).limit(5).all()
-    
-    return jsonify([item.to_dict() for item in top_items]), 200
+    """Get popular menu items using a weighted recency-based ranking."""
+    days = request.args.get('days', default=30, type=int)
+    limit = request.args.get('limit', default=5, type=int)
+
+    popular_items = RecommendationEngine.get_popular_items(days=days, limit=limit)
+    return jsonify(popular_items), 200
