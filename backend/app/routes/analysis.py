@@ -38,13 +38,13 @@ def market_basket_analysis():
     Run Apriori market basket analysis on historical orders.
     Query parameters:
         days          – how many past days to include (default 30)
-        min_support   – minimum support threshold (default 0.3)
-        min_confidence – minimum confidence threshold (default 0.7)
+        min_support   – minimum support threshold (default 0.05 = 5%)
+        min_confidence – minimum confidence threshold (default 0.2 = 20%)
     """
     try:
         days = int(request.args.get('days', 30))
-        min_support = float(request.args.get('min_support', 0.3))
-        min_confidence = float(request.args.get('min_confidence', 0.7))
+        min_support = float(request.args.get('min_support', 0.05))
+        min_confidence = float(request.args.get('min_confidence', 0.2))
     except ValueError:
         return jsonify({'error': 'Invalid query parameters'}), 400
     # Clamp thresholds to [0, 1]
@@ -92,8 +92,8 @@ def predict_items():
         return jsonify({'error': '"items" must be a list'}), 400
     try:
         days = int(data.get('days', 30))
-        min_support = float(data.get('min_support', 0.3))
-        min_confidence = float(data.get('min_confidence', 0.7))
+        min_support = float(data.get('min_support', 0.05))
+        min_confidence = float(data.get('min_confidence', 0.2))
     except (ValueError, TypeError):
         return jsonify({'error': 'Invalid parameter values'}), 400
     min_support = max(0.0, min(1.0, min_support))

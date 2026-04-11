@@ -1,5 +1,5 @@
 """
-Generate 100 realistic test orders to demonstrate the Apriori algorithm.
+Generate 300 realistic test orders to demonstrate the Apriori algorithm.
 Run from the backend directory:
     python scripts/generate_apriori_test_data.py
 The script uses the existing application context, so DATABASE_URL must be set.
@@ -15,18 +15,42 @@ from app.models import MenuItem, Order, OrderItem
 # ---------------------------------------------------------------------------
 # Order combinations (item names must match those in the menu).
 # Each entry is (combo, weight) where weight controls how often it appears.
+# Higher weight = more frequent combo = stronger association rule
 # ---------------------------------------------------------------------------
 COMBOS = [
-    (['Burger', 'French Fries', 'Coca Cola'], 15),
-    (['Steak', 'Smoothie'], 8),
-    (['Grilled Chicken', 'French Fries', 'Coca Cola'], 12),
-    (['Burger', 'French Fries', 'Coca Cola'], 10),   # extra weight for Burger combo
-    (['Samosa', 'Fresh Juice'], 10),
-    (['Spring Rolls', 'Coca Cola'], 8),
-    (['Paneer Tikka', 'Fresh Juice'], 9),
-    (['Fish Grilled', 'French Fries', 'Smoothie'], 8),
-    (['French Fries', 'Coca Cola'], 12),
-    (['Chicken Fries', 'Smoothie'], 8),
+    # Strong patterns - these will show strong recommendations
+    (['Burger', 'French Fries', 'Coca Cola'], 25),
+    (['Grilled Chicken', 'French Fries', 'Coca Cola'], 20),
+    (['Fish Grilled', 'French Fries', 'Smoothie'], 18),
+    (['Steak', 'French Fries', 'Coca Cola'], 15),
+    (['Chicken Fries', 'Coca Cola'], 18),
+    
+    # Appetizer patterns
+    (['Samosa', 'Fresh Juice'], 16),
+    (['Spring Rolls', 'Coca Cola'], 14),
+    (['Paneer Tikka', 'Fresh Juice'], 15),
+    (['Momos', 'Smoothie'], 12),
+    
+    # Light meals
+    (['French Fries', 'Coca Cola'], 20),
+    (['French Fries', 'Smoothie'], 14),
+    (['Chicken Wings', 'Coca Cola'], 12),
+    
+    # Vegetarian combos
+    (['Paneer Tikka', 'Coca Cola'], 10),
+    (['Samosa', 'Coca Cola'], 8),
+    
+    # Drink + Main combos
+    (['Burger', 'Smoothie'], 8),
+    (['Grilled Chicken', 'Smoothie'], 7),
+    (['Steak', 'Smoothie'], 6),
+    
+    # Standalone items (lower frequency)
+    (['Burger'], 5),
+    (['French Fries'], 4),
+    (['Coca Cola'], 3),
+    (['Smoothie'], 3),
+    (['Fresh Juice'], 2),
 ]
 def random_timestamp(days=30):
     """Return a random UTC datetime within the last *days* days."""
@@ -51,7 +75,7 @@ def main():
             weighted_combos.extend([combo_items] * weight)
         created = 0
         skipped = 0
-        for _ in range(100):
+        for _ in range(300):  # Generate 300 orders for better Apriori patterns
             item_names = random.choice(weighted_combos)
             # Resolve names; skip items that don't exist in the menu
             menu_items = [menu_by_name[name] for name in item_names if name in menu_by_name]
@@ -59,9 +83,9 @@ def main():
                 skipped += 1
                 continue
             order = Order(
-                table_number=str(random.randint(1, 20)),
+                table_number=str(random.randint(1, 25)),
                 status='completed',
-                created_at=random_timestamp(30),
+                created_at=random_timestamp(30),  # Spread over last 30 days for Apriori analysis
             )
             db_instance.session.add(order)
             db_instance.session.flush()  # assign order.id before adding items
@@ -80,5 +104,6 @@ def main():
         db_instance.session.commit()
         print(f"✅  Created {created} test orders ({skipped} skipped due to missing menu items).")
         print(f"   Total orders in DB: {Order.query.count()}")
+        print(f"📊 Apriori algorithm now has sufficient data for reliable recommendations!")
 if __name__ == '__main__':
     main()
