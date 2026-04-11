@@ -8,12 +8,10 @@ import { formatTimeInAppZone } from '../utils/time'
 import { 
   Clock, 
   CheckCircle, 
-  AlertCircle, 
   RefreshCw,
   MapPin,
   Package,
   ChefHat,
-  Info,
   Wifi,
   WifiOff,
 } from 'lucide-react'
@@ -253,80 +251,27 @@ function TrackingPage() {
     return formatTimeInAppZone(dateString)
   }
 
-  // ===== RENDER: SEARCH SECTION =====
-  if (!searched || !order) {
+  // ===== RENDER: NO ORDER SECTION =====
+  if (!order) {
     return (
       <div className="min-h-screen bg-[#F5F5F5] p-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-2xl mx-auto"
+          className="max-w-2xl mx-auto mt-12"
         >
-          {/* Header */}
-          <div className="text-center mb-12 mt-8">
-            <h1 className="mb-2 flex items-center justify-center gap-2 text-4xl font-bold text-[#FF8C00]">
-              <MapPin size={32} />
-              Track Your Order
-            </h1>
-            <p className="text-gray-600">
-              Enter your Order ID to see real-time status
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+            <h1 className="mb-3 text-3xl font-bold text-[#FF8C00]">No Order to Track</h1>
+            <p className="text-gray-600 mb-6">
+              Place an order first, then this page will show your live order status updates.
             </p>
-          </div>
-
-          {/* Search Card */}
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <form onSubmit={handleSearch} className="space-y-4">
-              {/* Order ID Input */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Order ID
-                </label>
-                <input
-                  type="text"
-                  value={orderId}
-                  onChange={(e) => setOrderId(e.target.value)}
-                  placeholder="Enter your Order ID (e.g., 123)"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[#FF8C00] focus:ring-2 focus:ring-[#FF8C00]/20"
-                />
-              </div>
-
-              {/* Error Message */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="bg-red-50 border border-red-200 rounded-lg p-4 flex gap-3"
-                >
-                  <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-red-700 text-sm">{error}</p>
-                </motion.div>
-              )}
-
-              {/* Search Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-[#FF8C00] hover:bg-orange-600 disabled:bg-gray-400 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <MapPin size={20} />
-                    Track Order
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* Example Info */}
-            <p className="mt-6 flex items-center justify-center gap-1 text-center text-sm text-gray-500">
-              <Info size={14} />
-              Example Order ID: 123 or 1001
-            </p>
+            {error && <p className="mb-6 text-sm text-red-600">{error}</p>}
+            <button
+              onClick={() => navigate(menuRoute)}
+              className="bg-[#008080] hover:bg-teal-700 text-white font-bold py-3 px-6 rounded-lg transition"
+            >
+              Go to Menu
+            </button>
           </div>
         </motion.div>
       </div>

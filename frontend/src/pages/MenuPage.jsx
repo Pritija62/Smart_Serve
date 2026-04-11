@@ -59,6 +59,10 @@ function MenuPage() {
     const tableParam = searchParams.get('table')
 
     if (!tableParam) {
+      if (tableNumber) {
+        updateTableNumber('')
+      }
+      setError(null)
       return
     }
 
@@ -79,9 +83,10 @@ function MenuPage() {
     }
 
     if (normalizedTable) {
+      setError(null)
       updateTableNumber(normalizedTable)
     }
-  }, [searchParams, updateTableNumber, validTableNumbers])
+  }, [searchParams, updateTableNumber, validTableNumbers, tableNumber])
 
   const groupedMenuItems = useMemo(() => {
     const groups = menuItems.reduce((acc, item) => {
